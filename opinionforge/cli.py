@@ -39,6 +39,7 @@ from opinionforge.models.config import ModeBlendConfig, StanceConfig, ImagePromp
 _VALID_EXPORT_FORMATS = frozenset({"substack", "medium", "wordpress", "twitter"})
 _VALID_IMAGE_PLATFORMS = frozenset({"substack", "medium", "wordpress", "facebook", "twitter", "instagram"})
 _VALID_IMAGE_STYLES = frozenset({"photorealistic", "editorial", "cartoon", "minimalist", "vintage", "abstract"})
+_VALID_PROVIDERS = frozenset({"ollama", "anthropic", "openai", "openai_compatible"})
 
 console = Console()
 err_console = Console(stderr=True)
@@ -46,8 +47,110 @@ err_console = Console(stderr=True)
 app = typer.Typer(
     name="opinionforge",
     help="OpinionForge — an editorial craft engine for generating opinion pieces with rhetorical precision.",
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
+
+
+# ---------------------------------------------------------------------------
+# Port / Server Helpers
+# ---------------------------------------------------------------------------
+
+_DEFAULT_PORT = 8484
+_MAX_PORT = 8494
+
+
+def _find_available_port(start: int = _DEFAULT_PORT, end: int = _MAX_PORT) -> int:
+    """Find the first available port in the range [start, end].
+
+    Args:
+        start: First port to try.
+        end: Last port to try (inclusive).
+
+    Returns:
+        An available port number.
+
+    Raises:
+        typer.Exit: With code 1 if no port is available.
+    """
+    import socket
+
+    for port in range(start, end + 1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind(("127.0.0.1", port))
+                return port
+            except OSError:
+                continue
+
+    err_console.print(
+        f"[red]Error:[/red] All ports {start}–{end} are in use. "
+        "Cannot start the web server."
+    )
+    raise typer.Exit(code=1)
+
+
+def _launch_server(
+    host: str = "127.0.0.1",
+    port: int | None = None,
+    open_browser: bool = True,
+) -> None:
+    """Launch the web server with optional browser auto-open and tray icon.
+
+    Args:
+        host: Host to bind the server to.
+        port: Specific port, or None to auto-detect.
+        open_browser: Whether to open the default browser on startup.
+    """
+    import threading
+
+    import uvicorn
+
+    from opinionforge.web.app import create_app
+
+    resolved_port = port if port is not None else _find_available_port()
+    url = f"http://{host}:{resolved_port}"
+
+    web_app = create_app()
+    console.print(f"[green]Starting OpinionForge web UI at {url}[/green]")
+
+    if open_browser:
+        def _open_browser_thread() -> None:
+            from opinionforge.desktop.browser import open_browser as _open
+
+            _open(url)
+
+        t = threading.Thread(target=_open_browser_thread, daemon=True)
+        t.start()
+
+    # Start system tray in background (optional dependency)
+    try:
+        from opinionforge.desktop.tray import PYSTRAY_AVAILABLE, SystemTrayApp
+
+        if PYSTRAY_AVAILABLE:
+            tray = SystemTrayApp(port=resolved_port, host=host)
+            tray.start()
+    except Exception:
+        pass  # Tray is best-effort
+
+    uvicorn.run(web_app, host=host, port=resolved_port)
+
+
+# ---------------------------------------------------------------------------
+# Default callback — bare ``opinionforge`` launches web UI
+# ---------------------------------------------------------------------------
+
+
+@app.callback()
+def _default_callback(ctx: typer.Context) -> None:
+    """Launch the web UI when no subcommand is given.
+
+    If a subcommand is provided, this callback is a no-op and the
+    subcommand runs normally.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+    _launch_server(open_browser=True)
 
 
 # ---------------------------------------------------------------------------
@@ -232,7 +335,7 @@ def _mask_key(value: str | None) -> str:
     Returns:
         A masked representation or '(not set)'.
     """
-    if not value:
+    if not value or not isinstance(value, str):
         return "(not set)"
     if len(value) <= 4:
         return "****"
@@ -352,6 +455,16 @@ def write(
         "--image-style",
         help="Visual style for the image prompt. One of: photorealistic, editorial, cartoon, minimalist, vintage, abstract.",
     ),
+    provider: Optional[str] = typer.Option(
+        None,
+        "--provider",
+        help="LLM provider override for this run. One of: ollama, anthropic, openai, openai_compatible.",
+    ),
+    model_override: Optional[str] = typer.Option(
+        None,
+        "--model",
+        help="Model name override for this run (e.g., 'llama3', 'claude-sonnet-4-20250514').",
+    ),
     # ---------------------------------------------------------------------------
     # Deprecated v0.2.0 flags — present to produce clear error messages, not used
     # ---------------------------------------------------------------------------
@@ -394,6 +507,19 @@ def write(
     mode_blend = _parse_mode_blend(mode)
     stance_cfg = _validate_stance(stance, intensity)
     target_length = _validate_length(length)
+
+    # Validate --provider
+    if provider is not None:
+        provider_lower = provider.lower()
+        if provider_lower not in _VALID_PROVIDERS:
+            supported = ", ".join(sorted(_VALID_PROVIDERS))
+            err_console.print(
+                f"[red]Error:[/red] Unknown provider '{provider}'. "
+                f"Supported providers: {supported}."
+            )
+            raise typer.Exit(code=2)
+    else:
+        provider_lower = None
 
     # Validate --export format
     if export_format is not None:
@@ -525,6 +651,8 @@ def write(
                 target_length=target_length,
                 research_context=research_context,
                 image_config=image_config,
+                provider_type=provider_lower,
+                model=model_override,
             )
     except SystemExit:
         raise
@@ -572,6 +700,16 @@ def preview(
     intensity: float = typer.Option(0.5, "--intensity", "-i", help="Rhetorical heat (0.0 to 1.0)."),
     url: Optional[str] = typer.Option(None, "--url", help="Ingest topic from a URL."),
     file: Optional[Path] = typer.Option(None, "--file", "-f", help="Ingest topic from a local file."),
+    provider: Optional[str] = typer.Option(
+        None,
+        "--provider",
+        help="LLM provider override for this run. One of: ollama, anthropic, openai, openai_compatible.",
+    ),
+    model_override: Optional[str] = typer.Option(
+        None,
+        "--model",
+        help="Model name override for this run (e.g., 'llama3', 'claude-sonnet-4-20250514').",
+    ),
 ) -> None:
     """Generate a short tone preview for the given topic.
 
@@ -580,6 +718,20 @@ def preview(
     """
     mode_blend = _parse_mode_blend(mode)
     stance_cfg = _validate_stance(stance, intensity)
+
+    # Validate --provider
+    if provider is not None:
+        provider_lower = provider.lower()
+        if provider_lower not in _VALID_PROVIDERS:
+            supported = ", ".join(sorted(_VALID_PROVIDERS))
+            err_console.print(
+                f"[red]Error:[/red] Unknown provider '{provider}'. "
+                f"Supported providers: {supported}."
+            )
+            raise typer.Exit(code=2)
+    else:
+        provider_lower = None
+
     topic_ctx = _ingest_topic(topic, url, file)
     mode_prompt = _load_modes(mode_blend)
 
@@ -587,11 +739,46 @@ def preview(
 
     modified_prompt = apply_stance(mode_prompt, stance_cfg)
 
-    from opinionforge.core.preview import create_llm_client, generate_preview
+    from opinionforge.core.preview import create_llm_client, create_llm_client_from_provider, generate_preview
 
     try:
         settings = get_settings()
-        client = create_llm_client(settings)
+        if provider_lower is not None:
+            # Build a provider via the registry and wrap in sync LLMClient
+            from opinionforge.providers import get_provider
+
+            from opinionforge.models.config import ProviderConfig
+
+            resolved_model: str
+            resolved_api_key: str | None = None
+            resolved_base_url: str | None = None
+
+            if provider_lower == "anthropic":
+                resolved_model = model_override or settings.opinionforge_model or "claude-sonnet-4-20250514"
+                resolved_api_key = settings.anthropic_api_key or ""
+            elif provider_lower == "openai":
+                resolved_model = model_override or settings.opinionforge_model or "gpt-4o"
+                resolved_api_key = settings.openai_api_key or ""
+            elif provider_lower == "ollama":
+                resolved_model = model_override or settings.opinionforge_model or "llama3"
+                resolved_base_url = settings.opinionforge_ollama_base_url
+            elif provider_lower == "openai_compatible":
+                resolved_model = model_override or settings.opinionforge_model or "default"
+                resolved_base_url = settings.opinionforge_ollama_base_url
+            else:
+                resolved_model = model_override or settings.opinionforge_model or "default"
+
+            provider_config = ProviderConfig(
+                provider_type=provider_lower,
+                model=resolved_model,
+                api_key=resolved_api_key or None,
+                base_url=resolved_base_url,
+            )
+            llm_provider = get_provider(provider_config)
+            client = create_llm_client_from_provider(llm_provider)
+        else:
+            client = create_llm_client(settings)
+
         preview_text = generate_preview(topic_ctx, modified_prompt, stance_cfg, client=client)
     except SystemExit:
         raise
@@ -720,40 +907,83 @@ def export(  # noqa: A001
 def serve(
     host: str = typer.Option(None, "--host", "-h", help="Host to bind the web server to."),
     port: int = typer.Option(None, "--port", "-p", help="Port to bind the web server to."),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Suppress opening the default browser on startup."),
 ) -> None:
     """Start the OpinionForge web UI server.
 
-    Launches a FastAPI/uvicorn server for the web interface.
-    Defaults to host 127.0.0.1 and port 8000, configurable via
-    --host/--port flags or OPINIONFORGE_HOST/OPINIONFORGE_PORT
-    environment variables.
+    Launches a FastAPI/uvicorn server for the web interface and opens
+    the default browser.  Defaults to host 127.0.0.1 and port 8484,
+    configurable via --host/--port flags or OPINIONFORGE_HOST/
+    OPINIONFORGE_PORT environment variables.  Use --no-browser to
+    suppress the automatic browser open.
     """
-    import uvicorn
-
-    from opinionforge.web.app import create_app
-
     settings = get_settings()
     resolved_host = host if host is not None else settings.opinionforge_host
-    resolved_port = port if port is not None else settings.opinionforge_port
+    resolved_port = port if port is not None else None
 
-    web_app = create_app()
-    console.print(
-        f"[green]Starting OpinionForge web UI at http://{resolved_host}:{resolved_port}[/green]"
+    _launch_server(
+        host=resolved_host,
+        port=resolved_port,
+        open_browser=not no_browser,
     )
-    uvicorn.run(web_app, host=resolved_host, port=resolved_port)
 
 
 @app.command()
 def config(
+    provider: Optional[str] = typer.Option(None, "--provider", help="Set the LLM provider (anthropic, openai, ollama, openai_compatible)."),
+    model: Optional[str] = typer.Option(None, "--model", help="Set the model name for the configured provider."),
     set_key: Optional[str] = typer.Option(None, "--set", help="Configuration key to set (format: KEY VALUE)."),
     set_value: Optional[str] = typer.Argument(None, help="Value for the --set key."),
 ) -> None:
     """Show or modify OpinionForge configuration.
 
-    Without --set, displays all current configuration values with API keys
-    masked. With --set KEY VALUE, updates a configuration value.
+    Without flags, displays all current configuration values (reading from
+    storage first, falling back to environment variables). With --provider
+    and/or --model, saves the provider configuration to persistent storage.
     """
+    import asyncio
+
     settings = get_settings()
+
+    # Handle --provider / --model shorthand
+    if provider is not None or model is not None:
+        if provider is not None:
+            provider_lower = provider.lower()
+            if provider_lower not in _VALID_PROVIDERS:
+                supported = ", ".join(sorted(_VALID_PROVIDERS))
+                err_console.print(
+                    f"[red]Error:[/red] Unknown provider '{provider}'. "
+                    f"Supported providers: {supported}."
+                )
+                raise typer.Exit(code=2)
+        else:
+            provider_lower = settings.opinionforge_llm_provider
+
+        model_name = model or settings.opinionforge_model or ""
+
+        # Save to storage
+        try:
+            from opinionforge.models.config import ProviderConfig
+            from opinionforge.storage import Database, SettingsStore, get_db_path
+
+            async def _save() -> None:
+                db_path = get_db_path()
+                db = Database(db_path)
+                await db.connect()
+                await db.initialize()
+                try:
+                    store = SettingsStore(db)
+                    cfg = ProviderConfig(provider_type=provider_lower, model=model_name)
+                    await store.set_provider_config(cfg)
+                finally:
+                    await db.close()
+
+            asyncio.run(_save())
+            console.print(f"[green]Saved provider config: {provider_lower} / {model_name}[/green]")
+        except Exception as exc:
+            err_console.print(f"[red]Error:[/red] Failed to save config: {exc}")
+            raise typer.Exit(code=1)
+        return
 
     if set_key:
         # Security: block setting API keys via CLI
@@ -784,16 +1014,54 @@ def config(
         console.print("[dim]Note: Runtime config changes are session-only. For persistence, update your .env file.[/dim]")
         return
 
-    # Display current configuration
+    # Display current configuration — try storage first, then env vars
+    stored_provider: str | None = None
+    stored_model: str | None = None
+    try:
+        from opinionforge.storage import Database, SettingsStore, get_db_path
+
+        async def _read_stored() -> tuple[str | None, str | None]:
+            db_path = get_db_path()
+            if not db_path.exists():
+                return None, None
+            db = Database(db_path)
+            await db.connect()
+            await db.initialize()
+            try:
+                store = SettingsStore(db)
+                cfg = await store.get_provider_config()
+                if cfg is not None:
+                    return cfg.provider_type, cfg.model
+            finally:
+                await db.close()
+            return None, None
+
+        stored_provider, stored_model = asyncio.run(_read_stored())
+    except Exception:
+        pass  # Fall back to env vars
+
     table = Table(title="OpinionForge Configuration")
     table.add_column("Setting", style="cyan")
     table.add_column("Value")
+    table.add_column("Source", style="dim")
 
-    table.add_row("LLM Provider", settings.opinionforge_llm_provider)
-    table.add_row("Anthropic API Key", _mask_key(settings.anthropic_api_key))
-    table.add_row("OpenAI API Key", _mask_key(settings.openai_api_key))
-    table.add_row("Search Provider", settings.opinionforge_search_provider)
-    table.add_row("Search API Key", _mask_key(settings.opinionforge_search_api_key))
+    if stored_provider:
+        table.add_row("LLM Provider", str(stored_provider), "storage")
+    else:
+        table.add_row("LLM Provider", str(settings.opinionforge_llm_provider), "env")
+
+    env_model = settings.opinionforge_model
+    if stored_model:
+        table.add_row("Model", str(stored_model), "storage")
+    elif env_model and isinstance(env_model, str):
+        table.add_row("Model", env_model, "env")
+    else:
+        table.add_row("Model", "(default)", "")
+
+    table.add_row("Anthropic API Key", _mask_key(settings.anthropic_api_key), "env")
+    table.add_row("OpenAI API Key", _mask_key(settings.openai_api_key), "env")
+    table.add_row("Search Provider", str(settings.opinionforge_search_provider), "env")
+    table.add_row("Search API Key", _mask_key(settings.opinionforge_search_api_key), "env")
 
     console.print(table)
 

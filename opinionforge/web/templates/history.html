@@ -1,0 +1,219 @@
+{% extends base_template|default("base.html") %}
+
+{% block title %}OpinionForge — History{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <h1>History</h1>
+    <p class="tagline">Browse, search, and manage your generated pieces</p>
+</div>
+
+{# ================================================================
+   Search, Filter, Sort Controls
+   ================================================================ #}
+<div class="history-controls">
+    <div class="history-search">
+        <input type="text" id="history-search-input" name="query" placeholder="Search by topic keyword..."
+               hx-post="/history/search"
+               hx-trigger="input changed delay:300ms, search"
+               hx-target="#history-grid"
+               hx-include=".history-filter-input"
+               hx-indicator="#search-spinner">
+        <span id="search-spinner" class="htmx-indicator spinner"></span>
+    </div>
+
+    <div class="history-filters">
+        <div class="history-filter-group">
+            <label for="filter-mode">Mode</label>
+            <select id="filter-mode" name="mode" class="history-filter-input"
+                    hx-post="/history/search"
+                    hx-trigger="change"
+                    hx-target="#history-grid"
+                    hx-include="#history-search-input, .history-filter-input">
+                <option value="">All modes</option>
+                {% for m in modes %}
+                <option value="{{ m.id }}">{{ m.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="history-filter-group">
+            <label for="filter-stance-min">Stance min</label>
+            <input type="number" id="filter-stance-min" name="stance_min" class="history-filter-input"
+                   min="-100" max="100" placeholder="-100"
+                   hx-post="/history/search"
+                   hx-trigger="change"
+                   hx-target="#history-grid"
+                   hx-include="#history-search-input, .history-filter-input">
+        </div>
+
+        <div class="history-filter-group">
+            <label for="filter-stance-max">Stance max</label>
+            <input type="number" id="filter-stance-max" name="stance_max" class="history-filter-input"
+                   min="-100" max="100" placeholder="100"
+                   hx-post="/history/search"
+                   hx-trigger="change"
+                   hx-target="#history-grid"
+                   hx-include="#history-search-input, .history-filter-input">
+        </div>
+
+        <div class="history-filter-group">
+            <label for="filter-date-from">From</label>
+            <input type="date" id="filter-date-from" name="date_from" class="history-filter-input"
+                   hx-post="/history/search"
+                   hx-trigger="change"
+                   hx-target="#history-grid"
+                   hx-include="#history-search-input, .history-filter-input">
+        </div>
+
+        <div class="history-filter-group">
+            <label for="filter-date-to">To</label>
+            <input type="date" id="filter-date-to" name="date_to" class="history-filter-input"
+                   hx-post="/history/search"
+                   hx-trigger="change"
+                   hx-target="#history-grid"
+                   hx-include="#history-search-input, .history-filter-input">
+        </div>
+
+        <div class="history-filter-group">
+            <label for="filter-sort">Sort</label>
+            <select id="filter-sort" name="sort_by" class="history-filter-input"
+                    hx-post="/history/search"
+                    hx-trigger="change"
+                    hx-target="#history-grid"
+                    hx-include="#history-search-input, .history-filter-input">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="words_desc">Word count (high to low)</option>
+                <option value="words_asc">Word count (low to high)</option>
+                <option value="mode_az">Mode A-Z</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+{# ================================================================
+   Bulk Actions
+   ================================================================ #}
+<div class="history-bulk-actions">
+    <label class="checkbox-group">
+        <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)">
+        <span>Select All</span>
+    </label>
+    <button type="button" class="btn btn-sm btn-outline history-delete-btn"
+            id="bulk-delete-btn" onclick="confirmBulkDelete()" disabled>
+        Delete Selected
+    </button>
+</div>
+
+{# ================================================================
+   Piece Grid
+   ================================================================ #}
+<div id="history-grid" class="history-grid">
+    {% if pieces %}
+        {% for piece in pieces %}
+            {% include "partials/piece_card.html" %}
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>No pieces yet. Generate your first piece from the <a href="/">home page</a>.</p>
+        </div>
+    {% endif %}
+</div>
+
+{# ================================================================
+   Pagination
+   ================================================================ #}
+{% if total_pages > 1 %}
+<div class="history-pagination">
+    {% if page > 1 %}
+    <a href="/history?page={{ page - 1 }}" class="btn btn-sm btn-outline">Previous</a>
+    {% endif %}
+    <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="/history?page={{ page + 1 }}" class="btn btn-sm btn-outline">Next</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{# ================================================================
+   Delete Confirmation Dialog
+   ================================================================ #}
+<div id="delete-confirm-dialog" class="confirm-dialog" style="display:none;">
+    <div class="confirm-dialog-backdrop" onclick="closeDeleteDialog()"></div>
+    <div class="confirm-dialog-box">
+        <h3>Confirm Deletion</h3>
+        <p id="delete-confirm-message">Are you sure you want to delete the selected pieces? This action is irreversible.</p>
+        <div class="confirm-dialog-actions">
+            <button type="button" class="btn btn-sm btn-outline" onclick="closeDeleteDialog()">Cancel</button>
+            <button type="button" class="btn btn-sm btn-primary" id="confirm-delete-btn" onclick="executeBulkDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleSelectAll(checked) {
+    document.querySelectorAll('.piece-select-cb').forEach(function(cb) {
+        cb.checked = checked;
+    });
+    updateBulkDeleteBtn();
+}
+
+function updateBulkDeleteBtn() {
+    var checked = document.querySelectorAll('.piece-select-cb:checked');
+    var btn = document.getElementById('bulk-delete-btn');
+    btn.disabled = checked.length === 0;
+}
+
+/* Attach change listener to checkboxes (including dynamically loaded ones) */
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('piece-select-cb')) {
+        updateBulkDeleteBtn();
+    }
+});
+
+function getSelectedIds() {
+    var ids = [];
+    document.querySelectorAll('.piece-select-cb:checked').forEach(function(cb) {
+        ids.push(cb.value);
+    });
+    return ids;
+}
+
+function confirmBulkDelete() {
+    var ids = getSelectedIds();
+    if (ids.length === 0) return;
+    var msg = 'Are you sure you want to delete ' + ids.length + ' piece' + (ids.length > 1 ? 's' : '') + '? This action is irreversible.';
+    document.getElementById('delete-confirm-message').textContent = msg;
+    document.getElementById('delete-confirm-dialog').style.display = 'flex';
+}
+
+function closeDeleteDialog() {
+    document.getElementById('delete-confirm-dialog').style.display = 'none';
+}
+
+function executeBulkDelete() {
+    var ids = getSelectedIds();
+    closeDeleteDialog();
+
+    var form = new FormData();
+    ids.forEach(function(id) {
+        form.append('piece_ids', id);
+    });
+
+    fetch('/history/bulk-delete', {
+        method: 'POST',
+        body: form,
+        headers: { 'HX-Request': 'true' }
+    }).then(function(resp) {
+        return resp.text();
+    }).then(function(html) {
+        document.getElementById('history-grid').innerHTML = html;
+        document.getElementById('select-all-cb').checked = false;
+        updateBulkDeleteBtn();
+    });
+}
+</script>
+{% endblock %}

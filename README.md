@@ -4,19 +4,19 @@
 
 OpinionForge is an AI-powered tool for producing publication-ready opinion content — op-eds, columns, and long-form opinion pieces — using a system of 12 rhetorical modes with independently tunable argumentative stance and rhetorical intensity. It is not about imitating any particular person: it is about choosing a rhetorical approach and arguing it well.
 
-Version: **1.0.0**
+Version: **2.0.0**
 
 ---
 
-## What It Does
+## What's New in v2.0.0
 
-OpinionForge takes a topic (text, URL, or file) and generates an opinion piece in a selected rhetorical mode. You control three dimensions:
-
-- **`--mode`** — The rhetorical approach (e.g., polemical, analytical, satirical)
-- **`--stance`** — Argumentative emphasis direction from -100 (equity-focused) to +100 (liberty-focused)
-- **`--intensity`** — Rhetorical heat from 0.0 (measured) to 1.0 (maximum conviction)
-
-Every generated piece includes a mandatory disclaimer identifying it as AI-assisted content.
+- **Multi-provider LLM support** — Anthropic, OpenAI, Ollama, and OpenAI-compatible endpoints. Switch providers at runtime via CLI flags or the settings UI
+- **Local SQLite storage** — All generated pieces, exports, and settings persist automatically in a platform-appropriate data directory
+- **History** — Browse, search, filter, and re-export past pieces through the web UI
+- **Settings UI** — Configure provider, model, default mode, stance, intensity, theme, and other preferences from the browser
+- **Desktop app mode** — System tray icon (via Pystray) with one-click server start and browser launch
+- **First-run onboarding** — Guided setup flow for API key, provider selection, and default preferences
+- **API key encryption** — Keys stored at rest are encrypted with the `cryptography` library
 
 ---
 
@@ -24,6 +24,12 @@ Every generated piece includes a mandatory disclaimer identifying it as AI-assis
 
 ```bash
 pip install opinionforge
+```
+
+For the desktop tray icon (optional):
+
+```bash
+pip install opinionforge[desktop]
 ```
 
 Configure your API key before using:
@@ -34,6 +40,8 @@ export ANTHROPIC_API_KEY=your-key-here
 export OPENAI_API_KEY=your-key-here
 export OPINIONFORGE_LLM_PROVIDER=openai
 ```
+
+Requires Python 3.11+.
 
 ---
 
@@ -55,6 +63,12 @@ opinionforge write "Climate policy tradeoffs" --mode analytical --stance -20 --i
 
 ```bash
 opinionforge write "The latest tech regulation proposal" --mode satirical --intensity 0.9 --no-preview
+```
+
+**Specify a provider and model:**
+
+```bash
+opinionforge write "Local journalism's future" --mode narrative --provider ollama --model llama3
 ```
 
 ---
@@ -139,8 +153,24 @@ The web UI provides:
 - **Stance and intensity controls** — interactive sliders for real-time adjustment
 - **Generation with streaming progress** — SSE-powered progress indicators for each pipeline stage
 - **Export** — export generated pieces to Substack, Medium, WordPress, or Twitter format
+- **History** — browse, search, and filter all past pieces at `/history`
+- **Settings** — configure provider, model, defaults, and theme at `/settings`
+- **Onboarding** — first-run guided setup for new users
 
 The web UI uses the same environment variables as the CLI (`ANTHROPIC_API_KEY`, `OPINIONFORGE_LLM_PROVIDER`, etc.). No additional configuration is required.
+
+---
+
+## Desktop App
+
+Install the desktop extras and launch from the system tray:
+
+```bash
+pip install opinionforge[desktop]
+opinionforge desktop
+```
+
+The tray icon provides one-click access to start/stop the web server and open the browser. The app runs in the background until explicitly quit.
 
 ---
 
@@ -165,6 +195,8 @@ opinionforge write [TOPIC] [OPTIONS]
 | `--export` | — | Export format: `substack`, `medium`, `wordpress`, `twitter` |
 | `--image-prompt` | — | Generate a header image prompt |
 | `--output`, `-o` | — | Write output to a file |
+| `--provider` | — | LLM provider: `anthropic`, `openai`, `ollama`, `openai_compatible` |
+| `--model` | — | Model identifier (overrides default) |
 | `--verbose` | — | Show research progress and generation details |
 
 **Mode blending:**
@@ -187,11 +219,67 @@ opinionforge modes --category literary
 opinionforge modes --detail analytical
 ```
 
+### `serve` — Start the web UI
+
+```bash
+opinionforge serve
+opinionforge serve --port 9000
+```
+
+### `desktop` — Launch the desktop tray app
+
+```bash
+opinionforge desktop
+```
+
 ### `config` — Show or modify configuration
 
 ```bash
 opinionforge config
 ```
+
+---
+
+## LLM Providers
+
+OpinionForge supports multiple LLM backends:
+
+| Provider | Config Value | Requirements |
+|----------|-------------|--------------|
+| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` |
+| OpenAI | `openai` | `OPENAI_API_KEY` |
+| Ollama | `ollama` | Local Ollama server running |
+| OpenAI-compatible | `openai_compatible` | `OPENAI_API_KEY` + `OPINIONFORGE_BASE_URL` |
+
+Set the provider via environment variable, CLI flag, or the settings UI:
+
+```bash
+# Environment variable
+export OPINIONFORGE_LLM_PROVIDER=ollama
+
+# CLI flag
+opinionforge write "Topic" --provider ollama --model llama3
+
+# Or configure in the web UI at /settings
+```
+
+---
+
+## Storage
+
+OpinionForge stores all data in a local SQLite database at the platform-standard location:
+
+- **Linux**: `~/.local/share/opinionforge/opinionforge.db`
+- **macOS**: `~/Library/Application Support/opinionforge/opinionforge.db`
+- **Windows**: `%LOCALAPPDATA%/opinionforge/opinionforge.db`
+
+The database stores:
+
+- **Pieces** — every generated opinion piece with full metadata (topic, mode, stance, intensity, sources, screening results)
+- **Exports** — export records linked to their parent pieces
+- **Settings** — provider configuration, user preferences, and custom key-value pairs
+
+API keys stored in settings are encrypted at rest using the `cryptography` library.
 
 ---
 
@@ -227,6 +315,16 @@ opinionforge write \
   --no-preview
 ```
 
+**4. Use Ollama with a local model:**
+
+```bash
+opinionforge write "Housing affordability" \
+  --provider ollama \
+  --model llama3 \
+  --mode populist \
+  --no-preview
+```
+
 ---
 
 ## Configuration
@@ -237,7 +335,8 @@ Set via environment variables or a `.env` file in your working directory:
 |----------|-------------|
 | `ANTHROPIC_API_KEY` | Anthropic API key (required when using Anthropic provider) |
 | `OPENAI_API_KEY` | OpenAI API key (required when using OpenAI provider) |
-| `OPINIONFORGE_LLM_PROVIDER` | LLM provider: `anthropic` (default) or `openai` |
+| `OPINIONFORGE_LLM_PROVIDER` | LLM provider: `anthropic` (default), `openai`, `ollama`, `openai_compatible` |
+| `OPINIONFORGE_BASE_URL` | Custom endpoint URL (for ollama or openai_compatible) |
 | `OPINIONFORGE_SEARCH_API_KEY` | Search API key for source research |
 | `OPINIONFORGE_SEARCH_PROVIDER` | Search provider: `tavily` (default), `brave`, or `serpapi` |
 
@@ -263,7 +362,7 @@ pip install -e ".[dev]"
 pytest tests/ -m "not slow"
 ```
 
-The test suite contains 1098 tests (990 fast + 108 confusability) covering unit tests, integration tests, end-to-end CLI tests, web UI tests, and confusability regression tests. All fast tests use mocked LLM and search clients — no real API calls. Confusability tests require an API key and are excluded by default.
+The test suite contains 1322 fast tests plus 108 confusability tests (1430 total) covering unit tests, integration tests, end-to-end CLI tests, web UI tests, storage integration tests, provider tests, desktop tests, and confusability regression tests. All fast tests use mocked LLM and search clients — no real API calls. Confusability tests require an API key and are excluded by default.
 
 ---
 
@@ -271,6 +370,7 @@ The test suite contains 1098 tests (990 fast + 108 confusability) covering unit 
 
 ```
 opinionforge/
+├── __main__.py             # Entry point
 ├── cli.py                  # Typer CLI application
 ├── config.py               # Settings (pydantic-settings)
 ├── core/
@@ -281,12 +381,33 @@ opinionforge/
 │   ├── research.py         # Source research pipeline
 │   ├── similarity.py       # Similarity screening
 │   └── topic.py            # Topic ingestion (text/URL/file)
+├── providers/              # LLM backends (Anthropic, OpenAI, Ollama, OpenAI-compatible)
+│   ├── base.py             # Abstract provider interface
+│   ├── registry.py         # Provider discovery and instantiation
+│   ├── anthropic.py
+│   ├── openai_provider.py
+│   ├── ollama.py
+│   └── openai_compatible.py
+├── storage/                # Local SQLite persistence
+│   ├── database.py         # Connection manager and schema
+│   ├── pieces.py           # Piece CRUD
+│   ├── exports.py          # Export record CRUD
+│   ├── settings.py         # Key-value settings store
+│   └── encryption.py       # API key encryption
 ├── exporters/              # Platform exporters (Substack, Medium, WordPress, Twitter)
+├── desktop/                # Desktop tray app (Pystray)
+│   ├── tray.py             # System tray icon and menu
+│   └── browser.py          # Browser launch helper
+├── web/                    # FastAPI web UI (HTMX frontend, SSE streaming)
+│   ├── app.py              # FastAPI application
+│   ├── sse.py              # Server-sent events for streaming
+│   ├── templates/          # Jinja2 templates (home, modes, history, settings, onboarding)
+│   └── static/             # CSS, JS, icons
 ├── modes/
 │   ├── profiles/           # 12 YAML mode profiles
 │   └── categories.yaml     # Category assignments
 ├── models/                 # Pydantic data models
-├── web/                    # FastAPI web UI (HTMX frontend, SSE streaming)
+├── utils/                  # Utilities (fetcher, search, text processing)
 └── data/                   # Suppressed phrases and structural fingerprints
 ```
 

@@ -1,0 +1,17 @@
+{# Single piece card for the history grid.
+   Expects: piece (dict with id, title, topic, mode, created_at, actual_length) #}
+<div class="history-card" id="piece-{{ piece.id }}">
+    <label class="history-card-checkbox">
+        <input type="checkbox" name="piece_ids" value="{{ piece.id }}" class="piece-select-cb">
+    </label>
+    <a href="/history/{{ piece.id }}" class="history-card-link">
+        <div class="history-card-header">
+            <span class="category-badge {{ piece.mode or 'analytical' }}">{{ piece.mode or 'unknown' }}</span>
+        </div>
+        <h3 class="history-card-title">{{ piece.title or (piece.topic[:50] ~ '...' if piece.topic|length > 50 else piece.topic) }}</h3>
+        <div class="history-card-meta">
+            <span class="history-card-date">{{ piece.created_at[:10] if piece.created_at else 'Unknown date' }}</span>
+            <span class="history-card-words">{{ piece.actual_length or 0 }} words</span>
+        </div>
+    </a>
+</div>

@@ -1,0 +1,14 @@
+{% if success %}
+<div class="connection-success">
+    <span class="status-icon status-success">&#10003;</span>
+    <span class="status-text">Connected successfully{% if model_name %} &mdash; {{ model_name }}{% endif %}</span>
+</div>
+{% else %}
+<div class="connection-error">
+    <span class="status-icon status-error">&#10007;</span>
+    <span class="status-text">{{ error_message }}</span>
+    {% if fix_instruction %}
+    <p class="fix-instruction">{{ fix_instruction }}</p>
+    {% endif %}
+</div>
+{% endif %}

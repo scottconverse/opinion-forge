@@ -1,0 +1,402 @@
+{% extends base_template|default("base.html") %}
+
+{% block title %}OpinionForge — Setup{% endblock %}
+
+{% block content %}
+<div class="setup-wizard" id="setup-wizard">
+    {# ================================================================
+       Progress Indicator
+       ================================================================ #}
+    <div class="setup-progress">
+        <div class="progress-steps">
+            {% for step_num in range(1, 6) %}
+            <button type="button"
+                    class="progress-step{% if step_num == 1 %} active{% endif %}"
+                    id="progress-step-{{ step_num }}"
+                    data-step="{{ step_num }}"
+                    onclick="setupWizard.goToStep({{ step_num }})"
+                    {% if step_num > 1 %}disabled{% endif %}>
+                <span class="step-number">{{ step_num }}</span>
+                <span class="step-label">
+                    {% if step_num == 1 %}Welcome
+                    {% elif step_num == 2 %}LLM Provider
+                    {% elif step_num == 3 %}Search
+                    {% elif step_num == 4 %}Quick Tour
+                    {% elif step_num == 5 %}Test
+                    {% endif %}
+                </span>
+            </button>
+            {% if step_num < 5 %}
+            <div class="progress-connector"></div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    {# ================================================================
+       Step 1: Welcome
+       ================================================================ #}
+    <div class="setup-step active" id="step-1" data-step="1">
+        <div class="step-content welcome-step">
+            <h1>Welcome to OpinionForge</h1>
+            <p class="welcome-description">
+                OpinionForge is an editorial craft engine that gives you precise
+                rhetorical control over AI-assisted opinion writing. Choose from
+                12 distinct rhetorical modes, fine-tune stance and intensity, and
+                generate polished, original pieces on any topic.
+            </p>
+            <p class="welcome-subtext">
+                Let's get you set up in a few quick steps. You'll configure your
+                LLM provider, optionally add a search provider for research, take
+                a quick tour, and generate a test piece.
+            </p>
+            <div class="step-actions">
+                <button type="button" class="btn btn-primary" onclick="setupWizard.next()">
+                    Get Started
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# ================================================================
+       Step 2: LLM Provider
+       ================================================================ #}
+    <div class="setup-step" id="step-2" data-step="2">
+        <div class="step-content">
+            <h2>Choose Your LLM Provider</h2>
+            <p>Select and configure the language model that will power your writing.</p>
+
+            <div class="provider-cards" id="provider-cards">
+                {# Ollama Card #}
+                <div class="provider-card" id="provider-card-ollama"
+                     data-provider="ollama" onclick="setupWizard.selectProvider('ollama')">
+                    <div class="provider-header">
+                        <h3>Ollama</h3>
+                        <span class="provider-badge" id="ollama-status">Checking...</span>
+                    </div>
+                    <p class="provider-desc">Run models locally. Free, private, no API key needed.</p>
+                    <div class="provider-fields" id="fields-ollama">
+                        <div class="form-group">
+                            <label for="ollama-url">Server URL</label>
+                            <input type="text" id="ollama-url" value="http://localhost:11434"
+                                   placeholder="http://localhost:11434">
+                        </div>
+                        <div class="form-group">
+                            <label for="ollama-model">Model</label>
+                            <select id="ollama-model">
+                                <option value="">Select a model...</option>
+                                {% if ollama_models %}
+                                {% for model in ollama_models %}
+                                <option value="{{ model }}">{{ model }}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="connection-test" id="test-ollama"
+                             hx-post="/setup/test-connection"
+                             hx-target="#connection-result-ollama"
+                             hx-swap="innerHTML"
+                             hx-indicator="#test-spinner-ollama">
+                            <button type="button" class="btn btn-outline btn-sm"
+                                    onclick="setupWizard.testConnection('ollama')">
+                                Test Connection
+                                <span id="test-spinner-ollama" class="htmx-indicator spinner"></span>
+                            </button>
+                            <div id="connection-result-ollama"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Anthropic Card #}
+                <div class="provider-card" id="provider-card-anthropic"
+                     data-provider="anthropic" onclick="setupWizard.selectProvider('anthropic')">
+                    <div class="provider-header">
+                        <h3>Anthropic</h3>
+                    </div>
+                    <p class="provider-desc">Claude models. Excellent for nuanced, long-form writing.</p>
+                    <div class="provider-fields" id="fields-anthropic">
+                        <div class="form-group">
+                            <label for="anthropic-key">API Key</label>
+                            <input type="password" id="anthropic-key"
+                                   placeholder="sk-ant-..." autocomplete="off">
+                            <a href="https://console.anthropic.com/" target="_blank"
+                               rel="noopener" class="field-link">Get an API key</a>
+                        </div>
+                        <div class="form-group">
+                            <label for="anthropic-model">Model</label>
+                            <select id="anthropic-model">
+                                <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                                <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                                <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+                            </select>
+                        </div>
+                        <div class="connection-test">
+                            <button type="button" class="btn btn-outline btn-sm"
+                                    onclick="setupWizard.testConnection('anthropic')">
+                                Test Connection
+                                <span id="test-spinner-anthropic" class="htmx-indicator spinner"></span>
+                            </button>
+                            <div id="connection-result-anthropic"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {# OpenAI Card #}
+                <div class="provider-card" id="provider-card-openai"
+                     data-provider="openai" onclick="setupWizard.selectProvider('openai')">
+                    <div class="provider-header">
+                        <h3>OpenAI</h3>
+                    </div>
+                    <p class="provider-desc">GPT-4 and GPT-3.5. Widely used, reliable output.</p>
+                    <div class="provider-fields" id="fields-openai">
+                        <div class="form-group">
+                            <label for="openai-key">API Key</label>
+                            <input type="password" id="openai-key"
+                                   placeholder="sk-..." autocomplete="off">
+                            <a href="https://platform.openai.com/" target="_blank"
+                               rel="noopener" class="field-link">Get an API key</a>
+                        </div>
+                        <div class="form-group">
+                            <label for="openai-model">Model</label>
+                            <select id="openai-model">
+                                <option value="gpt-4o">GPT-4o</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            </select>
+                        </div>
+                        <div class="connection-test">
+                            <button type="button" class="btn btn-outline btn-sm"
+                                    onclick="setupWizard.testConnection('openai')">
+                                Test Connection
+                                <span id="test-spinner-openai" class="htmx-indicator spinner"></span>
+                            </button>
+                            <div id="connection-result-openai"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {# OpenAI-Compatible Card #}
+                <div class="provider-card" id="provider-card-openai_compatible"
+                     data-provider="openai_compatible" onclick="setupWizard.selectProvider('openai_compatible')">
+                    <div class="provider-header">
+                        <h3>OpenAI-Compatible</h3>
+                    </div>
+                    <p class="provider-desc">Any OpenAI-compatible API (vLLM, LiteLLM, Together, etc.).</p>
+                    <div class="provider-fields" id="fields-openai_compatible">
+                        <div class="form-group">
+                            <label for="compat-url">Base URL</label>
+                            <input type="text" id="compat-url"
+                                   placeholder="https://api.example.com/v1">
+                        </div>
+                        <div class="form-group">
+                            <label for="compat-key">API Key (optional)</label>
+                            <input type="password" id="compat-key"
+                                   placeholder="Optional API key" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="compat-model">Model name</label>
+                            <input type="text" id="compat-model"
+                                   placeholder="e.g. mistral-7b">
+                        </div>
+                        <div class="connection-test">
+                            <button type="button" class="btn btn-outline btn-sm"
+                                    onclick="setupWizard.testConnection('openai_compatible')">
+                                Test Connection
+                                <span id="test-spinner-openai_compatible" class="htmx-indicator spinner"></span>
+                            </button>
+                            <div id="connection-result-openai_compatible"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button type="button" class="btn btn-text" onclick="setupWizard.back()">Back</button>
+                <button type="button" class="btn btn-primary" id="step2-next"
+                        onclick="setupWizard.saveProvider()" disabled>
+                    Save &amp; Continue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# ================================================================
+       Step 3: Search Provider
+       ================================================================ #}
+    <div class="setup-step" id="step-3" data-step="3">
+        <div class="step-content">
+            <h2>Search Provider (Optional)</h2>
+            <p>A search provider lets OpinionForge research topics with real sources before writing. You can skip this and add it later.</p>
+
+            <div class="search-cards" id="search-cards">
+                <div class="search-card" data-search="tavily"
+                     onclick="setupWizard.selectSearch('tavily')">
+                    <h3>Tavily</h3>
+                    <p>AI-optimised search API with structured results.</p>
+                    <div class="search-fields" id="search-fields-tavily">
+                        <div class="form-group">
+                            <label for="tavily-key">API Key</label>
+                            <input type="password" id="tavily-key" placeholder="tvly-..." autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="search-card" data-search="brave"
+                     onclick="setupWizard.selectSearch('brave')">
+                    <h3>Brave Search</h3>
+                    <p>Privacy-focused web search API.</p>
+                    <div class="search-fields" id="search-fields-brave">
+                        <div class="form-group">
+                            <label for="brave-key">API Key</label>
+                            <input type="password" id="brave-key" placeholder="BSA..." autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="search-card" data-search="serpapi"
+                     onclick="setupWizard.selectSearch('serpapi')">
+                    <h3>SerpAPI</h3>
+                    <p>Google search results via API.</p>
+                    <div class="search-fields" id="search-fields-serpapi">
+                        <div class="form-group">
+                            <label for="serpapi-key">API Key</label>
+                            <input type="password" id="serpapi-key" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button type="button" class="btn btn-text" onclick="setupWizard.back()">Back</button>
+                <button type="button" class="btn btn-outline"
+                        onclick="setupWizard.skipSearch()">Skip for now</button>
+                <button type="button" class="btn btn-primary" id="step3-next"
+                        onclick="setupWizard.saveSearch()" disabled>
+                    Save &amp; Continue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# ================================================================
+       Step 4: Quick Tour
+       ================================================================ #}
+    <div class="setup-step" id="step-4" data-step="4">
+        <div class="step-content">
+            <h2>Quick Tour</h2>
+            <p>Here's a quick overview of the main interface features.</p>
+
+            <div class="tour-carousel" id="tour-carousel">
+                <div class="tour-slide active" data-slide="0">
+                    <div class="tour-mockup">
+                        <div class="tour-highlight" data-highlight="mode-selector">
+                            <div class="tour-highlight-box"></div>
+                            <div class="tour-label">
+                                <strong>Mode Selector</strong>
+                                <p>Choose from 12 rhetorical modes like Analytical, Polemical, Satirical, and more. Select two to create a custom blend.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tour-slide" data-slide="1">
+                    <div class="tour-mockup">
+                        <div class="tour-highlight" data-highlight="stance-slider">
+                            <div class="tour-highlight-box"></div>
+                            <div class="tour-label">
+                                <strong>Stance Slider</strong>
+                                <p>Control the argumentative direction from equity-focused to liberty-focused, or keep it balanced at centre.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tour-slide" data-slide="2">
+                    <div class="tour-mockup">
+                        <div class="tour-highlight" data-highlight="intensity-slider">
+                            <div class="tour-highlight-box"></div>
+                            <div class="tour-label">
+                                <strong>Intensity Slider</strong>
+                                <p>Adjust rhetorical heat from measured and deliberative to maximum conviction and force.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tour-slide" data-slide="3">
+                    <div class="tour-mockup">
+                        <div class="tour-highlight" data-highlight="generate-button">
+                            <div class="tour-highlight-box"></div>
+                            <div class="tour-label">
+                                <strong>Generate Button</strong>
+                                <p>Enter a topic and hit Generate. OpinionForge researches, writes, and screens for originality automatically.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tour-nav">
+                <button type="button" class="btn btn-text btn-sm" id="tour-prev"
+                        onclick="setupWizard.tourPrev()" disabled>Previous</button>
+                <span class="tour-counter" id="tour-counter">1 / 4</span>
+                <button type="button" class="btn btn-text btn-sm" id="tour-next"
+                        onclick="setupWizard.tourNext()">Next</button>
+            </div>
+
+            <div class="step-actions">
+                <button type="button" class="btn btn-text" onclick="setupWizard.back()">Back</button>
+                <button type="button" class="btn btn-outline" onclick="setupWizard.next()">Skip Tour</button>
+                <button type="button" class="btn btn-primary" id="tour-continue"
+                        onclick="setupWizard.next()">
+                    Continue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# ================================================================
+       Step 5: Test Generation
+       ================================================================ #}
+    <div class="setup-step" id="step-5" data-step="5">
+        <div class="step-content">
+            <h2>Test Generation</h2>
+            <p>Let's make sure everything works. We'll generate a short sample piece using your configured provider.</p>
+
+            <div class="test-generation-info">
+                <p><strong>Topic:</strong> The Future of Remote Work</p>
+                <p><strong>Mode:</strong> Analytical</p>
+                <p><strong>Settings:</strong> Balanced stance, moderate intensity</p>
+            </div>
+
+            <div class="step-actions">
+                <button type="button" class="btn btn-text" onclick="setupWizard.back()">Back</button>
+                <button type="button" class="btn btn-primary" id="test-generate-btn"
+                        hx-post="/setup/test-generate"
+                        hx-target="#test-generate-result"
+                        hx-swap="innerHTML"
+                        hx-indicator="#test-generate-spinner"
+                        onclick="this.disabled = true">
+                    Run Test Generation
+                    <span id="test-generate-spinner" class="htmx-indicator spinner"></span>
+                </button>
+            </div>
+
+            <div id="test-generate-result"></div>
+
+            <div class="step-actions" id="finish-actions" style="display:none;">
+                <button type="button" class="btn btn-primary"
+                        hx-post="/setup/complete"
+                        hx-swap="none"
+                        onclick="setupWizard.complete()">
+                    Finish Setup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/onboarding.js"></script>
+{% endblock %}

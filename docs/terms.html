@@ -56,7 +56,7 @@
 
 <header>
   <h1>OpinionForge — Terms of Service</h1>
-  <p class="tagline">Effective date: March 25, 2026</p>
+  <p class="tagline">Effective date: March 26, 2026</p>
 </header>
 
 <div class="container">
@@ -96,13 +96,20 @@
   <h2>8. Limitation of Liability</h2>
   <p>The developers of OpinionForge shall not be liable for any damages arising from the use or inability to use the service, including but not limited to damages from published content, reputational harm, or reliance on generated claims.</p>
 
-  <h2>9. Changes to Terms</h2>
+  <h2>9. Local Data Storage</h2>
+  <p>OpinionForge v2.0.0 stores generated pieces, export records, and user preferences in a local SQLite database on your device. No data is transmitted to external servers beyond the LLM API calls required for content generation and the search API calls used for source research.</p>
+  <p>API keys configured through the settings UI are encrypted at rest using the <code>cryptography</code> library. Users are responsible for the security of their own devices and database files.</p>
+
+  <h2>10. Multi-Provider LLM Usage</h2>
+  <p>OpinionForge supports multiple LLM providers (Anthropic, OpenAI, Ollama, and OpenAI-compatible endpoints). When using third-party LLM providers, your topic text and generation parameters are sent to the selected provider's API. Users are responsible for reviewing and accepting the terms of service of their chosen LLM provider.</p>
+
+  <h2>11. Changes to Terms</h2>
   <p>These terms may be updated from time to time. Continued use of OpinionForge after changes constitutes acceptance of the revised terms.</p>
 
 </div>
 
 <footer>
-  <p>OpinionForge v1.0.0 — <a href="index.html">Back to home</a></p>
+  <p>OpinionForge v2.0.0 — <a href="index.html">Back to home</a></p>
 </footer>
 
 </body>

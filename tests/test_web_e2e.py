@@ -32,11 +32,18 @@ def _make_mock_client() -> MagicMock:
     return client
 
 
+def _make_mock_provider() -> MagicMock:
+    """Create a mock LLM provider so the home route does not redirect to /setup."""
+    provider = MagicMock()
+    provider.model_name.return_value = "mock/test-model"
+    return provider
+
+
 @pytest.fixture
 def client() -> TestClient:
     """Return a TestClient with a mock LLM client injected."""
     mock_llm = _make_mock_client()
-    app = create_app(client=mock_llm)
+    app = create_app(client=mock_llm, provider=_make_mock_provider())
     return TestClient(app)
 
 

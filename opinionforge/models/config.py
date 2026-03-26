@@ -1,4 +1,4 @@
-"""ModeBlendConfig, StanceConfig, and ImagePromptConfig models."""
+"""ModeBlendConfig, StanceConfig, ImagePromptConfig, ProviderConfig, SearchConfig, and UserPreferences models."""
 
 from __future__ import annotations
 
@@ -135,4 +135,82 @@ class ImagePromptConfig(BaseModel):
             A tuple of (width, height) in pixels.
         """
         return _PLATFORM_DIMENSIONS[self.platform]
+
+
+# ---------------------------------------------------------------------------
+# Provider, Search, and User-preferences models (Sprint 12)
+# ---------------------------------------------------------------------------
+
+_VALID_PROVIDER_TYPES = ("ollama", "anthropic", "openai", "openai_compatible")
+
+
+class ProviderConfig(BaseModel):
+    """LLM provider configuration for OpinionForge.
+
+    Attributes:
+        provider_type: The LLM provider backend.  Must be one of
+            ``'ollama'``, ``'anthropic'``, ``'openai'``, or
+            ``'openai_compatible'``.
+        model: Model identifier (e.g. ``'claude-3-opus-20240229'``).
+        api_key: Optional API key for the provider.
+        base_url: Optional custom endpoint URL.
+        max_tokens: Maximum tokens for generation.  Defaults to 4096.
+    """
+
+    provider_type: str
+    model: str
+    api_key: str | None = None
+    base_url: str | None = None
+    max_tokens: int = Field(default=4096)
+
+    @model_validator(mode="after")
+    def validate_provider_type(self) -> ProviderConfig:
+        """Validate that provider_type is one of the supported backends.
+
+        Returns:
+            The validated ProviderConfig instance.
+
+        Raises:
+            ValueError: If provider_type is not a recognised backend.
+        """
+        if self.provider_type not in _VALID_PROVIDER_TYPES:
+            raise ValueError(
+                f"provider_type must be one of {_VALID_PROVIDER_TYPES}, "
+                f"got '{self.provider_type}'"
+            )
+        return self
+
+
+class SearchConfig(BaseModel):
+    """Search provider configuration.
+
+    Attributes:
+        provider: Search backend identifier (e.g. ``'tavily'``).
+        api_key: Optional API key for the search provider.
+    """
+
+    provider: str
+    api_key: str | None = None
+
+
+class UserPreferences(BaseModel):
+    """User preference defaults persisted to the settings store.
+
+    Attributes:
+        default_mode: Default rhetorical mode id.
+        default_stance: Default stance position (-100 to 100).
+        default_intensity: Default rhetorical intensity (0.0 to 1.0).
+        default_length: Default output length preset.
+        theme: UI colour theme.
+        auto_launch: Whether to auto-launch the web UI on start.
+        onboarding_completed: Whether the user has finished onboarding.
+    """
+
+    default_mode: str = "analytical"
+    default_stance: int = 0
+    default_intensity: float = 0.5
+    default_length: str = "standard"
+    theme: str = "light"
+    auto_launch: bool = False
+    onboarding_completed: bool = False
 

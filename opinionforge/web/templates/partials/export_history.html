@@ -1,0 +1,18 @@
+{# Export history partial — lists previous exports for a piece.
+   Expects: exports (list of dicts with format, created_at, id) #}
+<div class="export-history-section">
+    <h4>Export History</h4>
+    {% if exports %}
+    <ul class="export-history-list">
+        {% for exp in exports %}
+        <li class="export-history-item">
+            <span class="export-history-format">{{ exp.format }}</span>
+            <span class="export-history-date">{{ exp.created_at[:19] if exp.created_at else '' }}</span>
+            <a href="#" class="export-history-view-link" hx-post="/history/{{ exp.piece_id }}/export" hx-target="#export-output" hx-swap="innerHTML" hx-vals='{"format": "{{ exp.format }}"}'>View</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty-state-text">No exports yet.</p>
+    {% endif %}
+</div>

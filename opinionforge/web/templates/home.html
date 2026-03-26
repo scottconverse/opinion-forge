@@ -2,18 +2,139 @@
 
 {% block title %}OpinionForge — Home{% endblock %}
 
+{% block head %}
+<style>
+    /* --- Category color coding for mode cards --- */
+    .mode-card.cat-confrontational { border-left: 4px solid #e53e3e; }
+    .mode-card.cat-investigative { border-left: 4px solid #3182ce; }
+    .mode-card.cat-deliberative { border-left: 4px solid #38a169; }
+    .mode-card.cat-literary { border-left: 4px solid #805ad5; }
+
+    .category-badge.confrontational { background: #fed7d7; color: #c53030; }
+    .category-badge.investigative { background: #bee3f8; color: #2b6cb0; }
+    .category-badge.deliberative { background: #c6f6d5; color: #276749; }
+    .category-badge.literary { background: #e9d8fd; color: #6b46c1; }
+
+    /* --- Mode card one-line description --- */
+    .mode-card .mode-one-liner {
+        font-size: 0.82rem;
+        color: #666;
+        margin-top: 0.25rem;
+        line-height: 1.3;
+    }
+
+    /* --- Help icon --- */
+    .help-toggle {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        color: #4a5568;
+        text-align: center;
+        line-height: 18px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin-left: 0.4rem;
+        vertical-align: middle;
+        user-select: none;
+    }
+    .help-toggle:hover { background: #cbd5e0; }
+
+    .help-text {
+        display: none;
+        font-size: 0.82rem;
+        color: #555;
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 0.5rem 0.75rem;
+        margin-top: 0.3rem;
+        line-height: 1.4;
+    }
+    .help-text.visible { display: block; }
+
+    /* --- Slider tooltip --- */
+    .slider-tooltip {
+        font-size: 0.78rem;
+        color: #718096;
+        margin-top: 0.15rem;
+    }
+
+    /* --- Two-column layout: main form + sidebar --- */
+    .home-layout {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 2rem;
+        align-items: start;
+    }
+    @media (max-width: 900px) {
+        .home-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* --- Recent pieces sidebar --- */
+    .sidebar {
+        position: sticky;
+        top: 1rem;
+    }
+    .sidebar h3 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+        color: #2d3748;
+    }
+    .recent-piece-card {
+        display: block;
+        padding: 0.6rem 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.15s;
+    }
+    .recent-piece-card:hover { border-color: #4299e1; }
+    .recent-piece-title {
+        font-weight: 600;
+        font-size: 0.88rem;
+        color: #2d3748;
+    }
+    .recent-piece-meta {
+        font-size: 0.75rem;
+        color: #718096;
+        margin-top: 0.15rem;
+    }
+    .empty-sidebar {
+        font-size: 0.85rem;
+        color: #a0aec0;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-hero">
     <h1>OpinionForge</h1>
     <p class="tagline">An editorial craft engine for opinion writing with precise rhetorical control</p>
 </div>
 
+<div class="home-layout">
+<div class="main-form">
 <form id="generate-form" method="post">
     {# ================================================================
        Topic Input — Tabs for Text / URL / File
        ================================================================ #}
     <div class="form-group">
-        <label>Topic</label>
+        <label>Topic
+            <span class="help-toggle" onclick="toggleHelp('help-topic')">?</span>
+        </label>
+        <div id="help-topic" class="help-text">
+            Enter a topic, thesis, or argument you want to explore. You can type free-form
+            text, paste a URL to an existing article, or upload a document file.
+        </div>
         <div class="tabs">
             <button type="button" class="tab-btn active" data-tab="tab-text">Text</button>
             <button type="button" class="tab-btn" data-tab="tab-url">URL</button>
@@ -21,7 +142,14 @@
         </div>
         <div id="tab-text" class="tab-panel active">
             <textarea id="topic-text" name="topic" rows="4"
-                      placeholder="Enter your topic, thesis, or argument prompt..."></textarea>
+                      placeholder="Enter your topic, thesis, or argument prompt..."
+                      list="topic-suggestions"></textarea>
+            {# Topic suggestions datalist from recent topics #}
+            <datalist id="topic-suggestions">
+                {% for t in recent_topics %}
+                <option value="{{ t }}">
+                {% endfor %}
+            </datalist>
         </div>
         <div id="tab-url" class="tab-panel">
             <input type="url" id="topic-url" name="topic_url" placeholder="https://example.com/article-to-respond-to">
@@ -35,7 +163,16 @@
        Mode Selector Grid — 12 modes by category
        ================================================================ #}
     <div class="form-group">
-        <label>Rhetorical Mode <span class="label-hint">Click one mode, or two to blend</span></label>
+        <label>Rhetorical Mode <span class="label-hint">Click one mode, or two to blend</span>
+            <span class="help-toggle" onclick="toggleHelp('help-mode')">?</span>
+        </label>
+        <div id="help-mode" class="help-text">
+            Each rhetorical mode shapes the tone, structure, and argumentative style of the
+            generated piece. Modes are grouped into four categories: Confrontational (direct,
+            challenging), Investigative (evidence-driven), Deliberative (balanced, thoughtful),
+            and Literary (stylistic, narrative). Select one mode for a pure style, or two to
+            blend them.
+        </div>
 
         <input type="hidden" id="mode-input" name="mode" value="{{ selected_mode or 'analytical' }}">
 
@@ -43,12 +180,12 @@
         <p class="section-title">{{ cat_name }}</p>
         <div class="modes-grid">
             {% for m in cat_modes %}
-            <div class="mode-card{% if m.id == (selected_mode or 'analytical') %} selected{% endif %}"
+            <div class="mode-card cat-{{ m.category }}{% if m.id == (selected_mode or 'analytical') %} selected{% endif %}"
                  data-mode-id="{{ m.id }}"
                  onclick="selectMode(this)">
                 <span class="category-badge {{ m.category }}">{{ m.category }}</span>
                 <div class="mode-name">{{ m.display_name }}</div>
-                <p class="mode-desc">{{ m.description | truncate(120) }}</p>
+                <p class="mode-one-liner">{{ m.description | truncate(80) }}</p>
             </div>
             {% endfor %}
         </div>
@@ -65,12 +202,22 @@
        ================================================================ #}
     <div class="slider-group">
         <div class="slider-header">
-            <span class="slider-label">Stance</span>
+            <span class="slider-label">Stance
+                <span class="help-toggle" onclick="toggleHelp('help-stance')">?</span>
+            </span>
             <span class="slider-value" id="stance-value">0 — balanced</span>
+        </div>
+        <div id="help-stance" class="help-text">
+            The stance slider controls the argumentative direction of the piece on a
+            scale from -100 (strongly equity-focused) to +100 (strongly liberty-focused).
+            A value of 0 produces a balanced perspective. The further from center, the
+            more the argument leans toward one side.
         </div>
         <input type="range" id="stance" name="stance"
                min="-100" max="100" value="{{ stance_default }}" step="1"
+               title="Argumentative emphasis: -100 (equity-focused) to +100 (liberty-focused)"
                oninput="updateStanceLabel(this.value)">
+        <div class="slider-tooltip">Range: -100 (equity-focused) to +100 (liberty-focused). 0 = balanced.</div>
     </div>
 
     {# ================================================================
@@ -78,12 +225,21 @@
        ================================================================ #}
     <div class="slider-group">
         <div class="slider-header">
-            <span class="slider-label">Intensity</span>
+            <span class="slider-label">Intensity
+                <span class="help-toggle" onclick="toggleHelp('help-intensity')">?</span>
+            </span>
             <span class="slider-value" id="intensity-value">0.5 — moderate</span>
+        </div>
+        <div id="help-intensity" class="help-text">
+            Intensity controls the rhetorical heat of the writing. At 0.0, the prose is
+            measured and even-handed. At 1.0, the writing uses maximum conviction with
+            strong rhetorical devices and forceful language.
         </div>
         <input type="range" id="intensity" name="intensity"
                min="0" max="1" value="{{ intensity_default }}" step="0.05"
+               title="Rhetorical heat: 0.0 (measured) to 1.0 (maximum conviction)"
                oninput="updateIntensityLabel(this.value)">
+        <div class="slider-tooltip">Range: 0.0 (measured) to 1.0 (maximum conviction).</div>
     </div>
 
     {# ================================================================
@@ -182,10 +338,35 @@
     <div id="sse-container"></div>
     <div id="result-area"></div>
 </div>
+</div>{# /main-form #}
+
+{# ================================================================
+   Recent Pieces Sidebar
+   ================================================================ #}
+<aside class="sidebar" id="recent-pieces-sidebar">
+    <h3>Recent Pieces</h3>
+    {% if recent_pieces %}
+        {% for piece in recent_pieces %}
+        <a href="/history/{{ piece.id }}" class="recent-piece-card">
+            <div class="recent-piece-title">{{ piece.title or 'Untitled' }}</div>
+            <div class="recent-piece-meta">{{ piece.mode or '' }} &middot; {{ piece.created_at[:10] if piece.created_at else '' }}</div>
+        </a>
+        {% endfor %}
+    {% else %}
+        <p class="empty-sidebar">No recent pieces</p>
+    {% endif %}
+</aside>
+</div>{# /home-layout #}
 {% endblock %}
 
 {% block scripts %}
 <script>
+/* --- Help toggle --- */
+function toggleHelp(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('visible');
+}
+
 /* --- Topic Tabs --- */
 var activeTab = 'tab-text';
 document.querySelectorAll('.tab-btn').forEach(function(btn) {

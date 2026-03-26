@@ -4,6 +4,41 @@ All notable changes to OpinionForge are documented in this file.
 
 ---
 
+## [2.0.0] - 2026-03-26
+
+Local desktop application with pluggable LLM backends. OpinionForge now runs entirely on the user's machine and connects to whatever LLM the user already has.
+
+### Added
+
+- **Pluggable LLM providers**: Ollama (local, free), Anthropic Claude, OpenAI, and any OpenAI-compatible endpoint (LM Studio, vLLM, etc.)
+- **Provider registry** with auto-detection (finds running Ollama instances), connection testing, and model listing
+- **Local SQLite database** for persistent storage of generated pieces, settings, and export history
+- **First-run onboarding wizard** -- 5-step setup: welcome, LLM provider config with connection test, search provider setup, quick tour, test generation
+- **History page** -- browse, search, filter, sort, and re-export all generated pieces
+- **Settings page** -- LLM provider config, search provider config, user preferences, data export, history management
+- **API key encryption** at rest using Fernet symmetric encryption with machine-specific key
+- **Desktop integration** -- system tray icon (optional, via pystray), browser auto-open on launch, port fallback (8484-8494)
+- **`opinionforge` bare command** launches the web UI (no subcommand needed)
+- **`opinionforge config`** reads from SQLite storage with `--provider`/`--model` flags
+- **Home page improvements** -- mode cards with descriptions and category colors, slider tooltips, help icons, recent pieces sidebar, topic suggestions
+- **HX-Request detection** -- routes return partials for HTMX requests, full pages for direct navigation
+- **SSE generation** renders full `piece_result.html` template (sources, copy button, export buttons)
+
+### Changed
+
+- Architecture changed from hosted web server to local desktop application
+- LLM calls are now provider-agnostic via the `LLMProvider` protocol
+- Version bumped to 2.0.0
+- Default port changed from 8000 to 8484
+
+### Security
+
+- API keys encrypted at rest in local SQLite database
+- API keys displayed masked (last 4 characters only) in settings UI
+- No data leaves the user's machine except LLM API calls to their chosen provider
+
+---
+
 ## [1.0.0] - 2026-03-25
 
 Initial public release. OpinionForge v1.0.0 is a complete rewrite from the private v0.2.0 prototype, redesigned around abstract rhetorical modes rather than named writer profiles.

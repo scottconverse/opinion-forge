@@ -1,0 +1,252 @@
+{% extends base_template|default("base.html") %}
+
+{% block title %}OpinionForge — Settings{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <h1>Settings</h1>
+    <p class="tagline">Configure providers, preferences, and manage your data</p>
+</div>
+
+{# ================================================================
+   LLM Provider Configuration
+   ================================================================ #}
+<section class="settings-section" id="provider-section">
+    <h2>LLM Provider</h2>
+    <form id="provider-form"
+          hx-post="/settings/provider"
+          hx-target="#provider-feedback"
+          hx-swap="innerHTML">
+
+        <div class="form-group">
+            <label for="provider_type">Provider</label>
+            <div class="provider-cards">
+                {% for ptype in ["ollama", "anthropic", "openai", "openai_compatible"] %}
+                <label class="provider-card{% if provider_config and provider_config.provider_type == ptype %} selected{% endif %}">
+                    <input type="radio" name="provider_type" value="{{ ptype }}"
+                           {% if provider_config and provider_config.provider_type == ptype %}checked{% endif %}
+                           onchange="updateProviderFields()">
+                    <span class="provider-name">{{ ptype | replace("_", " ") | title }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group" id="model-field">
+            <label for="model">Model</label>
+            <select id="model" name="model">
+                {% for m in models %}
+                <option value="{{ m }}" {% if provider_config and provider_config.model == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group" id="api-key-field">
+            <label for="api_key">API Key</label>
+            <input type="password" id="api_key" name="api_key"
+                   placeholder="Enter your API key"
+                   value="{{ masked_api_key or '' }}">
+            <p class="field-hint">Keys are encrypted before storage.</p>
+        </div>
+
+        <div class="form-group" id="base-url-field">
+            <label for="base_url">Base URL <span class="label-hint">(optional)</span></label>
+            <input type="url" id="base_url" name="base_url"
+                   placeholder="https://api.example.com/v1"
+                   value="{{ provider_config.base_url or '' if provider_config else '' }}">
+        </div>
+
+        <div class="actions-row">
+            <button type="submit" class="btn btn-primary">Save Provider</button>
+            <button type="button" class="btn btn-outline"
+                    hx-post="/settings/provider?test_only=1"
+                    hx-target="#provider-feedback"
+                    hx-swap="innerHTML"
+                    hx-include="#provider-form">
+                Test Connection
+            </button>
+        </div>
+        <div id="provider-feedback"></div>
+    </form>
+</section>
+
+{# ================================================================
+   Search Provider Configuration
+   ================================================================ #}
+<section class="settings-section" id="search-section">
+    <h2>Search Provider</h2>
+    <form id="search-form"
+          hx-post="/settings/search"
+          hx-target="#search-feedback"
+          hx-swap="innerHTML">
+
+        <div class="form-group">
+            <label for="search_provider">Provider</label>
+            <select id="search_provider" name="search_provider">
+                <option value="none" {% if not search_config or search_config.provider == 'none' %}selected{% endif %}>Disabled</option>
+                <option value="tavily" {% if search_config and search_config.provider == 'tavily' %}selected{% endif %}>Tavily</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="search_api_key">API Key</label>
+            <input type="password" id="search_api_key" name="search_api_key"
+                   placeholder="Enter search API key"
+                   value="{{ masked_search_key or '' }}">
+        </div>
+
+        <div class="actions-row">
+            <button type="submit" class="btn btn-primary">Save Search Settings</button>
+            <button type="button" class="btn btn-outline"
+                    hx-post="/settings/test-search"
+                    hx-target="#search-feedback"
+                    hx-swap="innerHTML"
+                    hx-include="#search-form">
+                Test Connection
+            </button>
+        </div>
+        <div id="search-feedback"></div>
+    </form>
+</section>
+
+{# ================================================================
+   User Preferences
+   ================================================================ #}
+<section class="settings-section" id="preferences-section">
+    <h2>Preferences</h2>
+    <form id="preferences-form"
+          hx-post="/settings/preferences"
+          hx-target="#preferences-feedback"
+          hx-swap="innerHTML">
+
+        <div class="form-group">
+            <label for="default_mode">Default Mode</label>
+            <select id="default_mode" name="default_mode">
+                {% for m in all_modes %}
+                <option value="{{ m.id }}" {% if preferences.default_mode == m.id %}selected{% endif %}>{{ m.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="slider-group">
+            <div class="slider-header">
+                <span class="slider-label">Default Stance</span>
+                <span class="slider-value" id="settings-stance-value">{{ preferences.default_stance }}</span>
+            </div>
+            <input type="range" id="default_stance" name="default_stance"
+                   min="-100" max="100" value="{{ preferences.default_stance }}" step="1"
+                   oninput="document.getElementById('settings-stance-value').textContent = this.value">
+        </div>
+
+        <div class="slider-group">
+            <div class="slider-header">
+                <span class="slider-label">Default Intensity</span>
+                <span class="slider-value" id="settings-intensity-value">{{ preferences.default_intensity }}</span>
+            </div>
+            <input type="range" id="default_intensity" name="default_intensity"
+                   min="0" max="1" value="{{ preferences.default_intensity }}" step="0.05"
+                   oninput="document.getElementById('settings-intensity-value').textContent = parseFloat(this.value).toFixed(2)">
+        </div>
+
+        <div class="form-group">
+            <label for="default_length">Default Length</label>
+            <select id="default_length" name="default_length">
+                {% for val, label in [("short", "Short (~400 words)"), ("standard", "Standard (~800 words)"), ("long", "Long (~1200 words)"), ("essay", "Essay (~2000 words)"), ("feature", "Feature (~3000 words)")] %}
+                <option value="{{ val }}" {% if preferences.default_length == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="theme">Theme</label>
+            <select id="theme" name="theme">
+                <option value="light" {% if preferences.theme == 'light' %}selected{% endif %}>Light</option>
+                <option value="dark" {% if preferences.theme == 'dark' %}selected{% endif %}>Dark</option>
+            </select>
+        </div>
+
+        <div class="actions-row">
+            <button type="submit" class="btn btn-primary">Save Preferences</button>
+        </div>
+        <div id="preferences-feedback"></div>
+    </form>
+</section>
+
+{# ================================================================
+   Data Management
+   ================================================================ #}
+<section class="settings-section" id="data-section">
+    <h2>Data Management</h2>
+
+    <div class="data-info">
+        <p><strong>Database location:</strong> <code>{{ db_path }}</code></p>
+        <p><strong>Pieces stored:</strong> {{ piece_count }}</p>
+    </div>
+
+    <div class="actions-row">
+        <button type="button" class="btn btn-primary"
+                hx-post="/settings/export-data"
+                hx-target="#data-feedback"
+                hx-swap="innerHTML">
+            Export All Pieces as JSON
+        </button>
+        <button type="button" class="btn btn-danger"
+                hx-post="/settings/clear-history"
+                hx-target="#data-feedback"
+                hx-swap="innerHTML"
+                hx-confirm="Are you sure you want to delete all pieces and exports? This action cannot be undone.">
+            Clear History
+        </button>
+    </div>
+    <div id="data-feedback"></div>
+</section>
+
+{# ================================================================
+   Quick Tour
+   ================================================================ #}
+<section class="settings-section" id="tour-section">
+    <h2>Onboarding</h2>
+    <div class="actions-row">
+        <button type="button" class="btn btn-outline"
+                onclick="window.location.href='/setup'">
+            Replay Tour
+        </button>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateProviderFields() {
+    var selected = document.querySelector('input[name="provider_type"]:checked');
+    if (!selected) return;
+    var ptype = selected.value;
+
+    /* Show/hide API key field — Ollama does not need one */
+    var akField = document.getElementById('api-key-field');
+    if (ptype === 'ollama') {
+        akField.style.display = 'none';
+    } else {
+        akField.style.display = '';
+    }
+
+    /* Show base URL for ollama and openai_compatible */
+    var buField = document.getElementById('base-url-field');
+    if (ptype === 'ollama' || ptype === 'openai_compatible') {
+        buField.style.display = '';
+    } else {
+        buField.style.display = 'none';
+    }
+
+    /* Update selected card styling */
+    document.querySelectorAll('.provider-card').forEach(function(card) {
+        card.classList.remove('selected');
+    });
+    selected.closest('.provider-card').classList.add('selected');
+}
+
+/* Initialise on page load */
+updateProviderFields();
+</script>
+{% endblock %}

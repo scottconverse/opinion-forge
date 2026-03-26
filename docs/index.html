@@ -380,6 +380,68 @@ opinionforge write "The attention economy" \
     <p>This policy exists because OpinionForge generates original AI content with a defined rhetorical character. The disclaimer ensures readers understand what they are reading. It is not negotiable.</p>
   </section>
 
+  <section id="new-in-v2">
+    <h2>New in v2.0.0</h2>
+    <ul>
+      <li><strong>Multi-provider LLM support</strong> — Anthropic, OpenAI, Ollama, and OpenAI-compatible endpoints. Switch providers at runtime via CLI flags or the settings UI</li>
+      <li><strong>Local SQLite storage</strong> — All generated pieces, exports, and settings persist automatically in a platform-appropriate data directory</li>
+      <li><strong>History</strong> — Browse, search, filter, and re-export past pieces through the web UI</li>
+      <li><strong>Settings UI</strong> — Configure provider, model, defaults, and theme from the browser</li>
+      <li><strong>Desktop app mode</strong> — System tray icon with one-click server start and browser launch</li>
+      <li><strong>First-run onboarding</strong> — Guided setup for API key, provider selection, and default preferences</li>
+      <li><strong>API key encryption</strong> — Keys stored at rest are encrypted</li>
+    </ul>
+  </section>
+
+  <section id="providers">
+    <h2>LLM Providers</h2>
+    <table class="flags-table">
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Config Value</th>
+          <th>Requirements</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Anthropic</td>
+          <td>anthropic</td>
+          <td>ANTHROPIC_API_KEY</td>
+        </tr>
+        <tr>
+          <td>OpenAI</td>
+          <td>openai</td>
+          <td>OPENAI_API_KEY</td>
+        </tr>
+        <tr>
+          <td>Ollama</td>
+          <td>ollama</td>
+          <td>Local Ollama server</td>
+        </tr>
+        <tr>
+          <td>OpenAI-compatible</td>
+          <td>openai_compatible</td>
+          <td>OPENAI_API_KEY + base URL</td>
+        </tr>
+      </tbody>
+    </table>
+    <pre>opinionforge write "Topic" --provider ollama --model llama3</pre>
+  </section>
+
+  <section id="storage">
+    <h2>Local Storage</h2>
+    <p>OpinionForge stores all data in a local SQLite database. Every generated piece, export record, and user preference is persisted automatically. API keys are encrypted at rest.</p>
+    <p>The database lives in the platform-standard location: <code>~/.local/share/opinionforge/</code> on Linux, <code>~/Library/Application Support/opinionforge/</code> on macOS, or <code>%LOCALAPPDATA%/opinionforge/</code> on Windows.</p>
+  </section>
+
+  <section id="desktop">
+    <h2>Desktop App</h2>
+    <pre>pip install opinionforge[desktop]
+opinionforge desktop</pre>
+    <p>Launches a system tray icon with one-click access to start and stop the web server, open the browser, and quit the application.</p>
+  </section>
+
   <section id="docs">
     <h2>Documentation</h2>
     <ul>
@@ -391,7 +453,7 @@ opinionforge write "The attention economy" \
 </div>
 
 <footer>
-  <p>OpinionForge v1.0.0 — An editorial craft engine for AI-assisted opinion writing.</p>
+  <p>OpinionForge v2.0.0 — An editorial craft engine for AI-assisted opinion writing.</p>
   <p style="margin-top: 0.5rem;">Released under the MIT License.</p>
 </footer>
 

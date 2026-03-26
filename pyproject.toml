@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "opinionforge"
-version = "1.0.0"
+version = "2.0.0"
 description = "AI-powered editorial craft engine for generating opinion pieces with precise rhetorical control."
 requires-python = ">=3.11"
 dependencies = [
@@ -24,9 +24,16 @@ dependencies = [
     "jinja2>=3.1",
     "sse-starlette>=1.6",
     "python-multipart>=0.0.6",
+    "aiosqlite>=0.19",
+    "platformdirs>=4.0",
+    "cryptography>=41.0",
 ]
 
 [project.optional-dependencies]
+desktop = [
+    "pystray>=0.19",
+    "Pillow>=10.0",
+]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",

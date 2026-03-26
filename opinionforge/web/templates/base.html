@@ -14,9 +14,11 @@
         <nav class="site-nav">
             <a href="/" class="brand">OpinionForge</a>
             <ul class="nav-links">
-                <li><a href="/">Home</a></li>
-                <li><a href="/modes">Modes</a></li>
-                <li><a href="/about">About</a></li>
+                <li><a href="/"{% if current_page == 'home' %} class="active"{% endif %}>Home</a></li>
+                <li><a href="/modes"{% if current_page == 'modes' %} class="active"{% endif %}>Modes</a></li>
+                <li><a href="/history"{% if current_page == 'history' %} class="active"{% endif %}>History</a></li>
+                <li><a href="/settings"{% if current_page == 'settings' %} class="active"{% endif %}>Settings</a></li>
+                <li><a href="/about"{% if current_page == 'about' %} class="active"{% endif %}>About</a></li>
             </ul>
         </nav>
     </header>
@@ -24,7 +26,7 @@
         {% block content %}{% endblock %}
     </main>
     <footer class="site-footer">
-        <p>OpinionForge v1.0.0 &mdash; An editorial craft engine for AI-assisted opinion writing.</p>
+        <p>OpinionForge v2.0.0 &mdash; An editorial craft engine for AI-assisted opinion writing.</p>
         <p><a href="/about">Disclaimer Policy</a></p>
     </footer>
     {% block scripts %}{% endblock %}

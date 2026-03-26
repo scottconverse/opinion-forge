@@ -1,0 +1,18 @@
+<div class="settings-feedback {% if success %}feedback-success{% else %}feedback-error{% endif %}"
+     id="feedback-{{ section }}"
+     data-auto-dismiss="3000">
+    {% if success %}
+    <p>Saved successfully.</p>
+    {% else %}
+    <p><strong>Error:</strong> {{ error }}</p>
+    {% endif %}
+</div>
+<script>
+(function() {
+    var el = document.getElementById('feedback-{{ section }}');
+    if (el) {
+        setTimeout(function() { el.style.opacity = '0'; }, 2500);
+        setTimeout(function() { el.remove(); }, 3000);
+    }
+})();
+</script>

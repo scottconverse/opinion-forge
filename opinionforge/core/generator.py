@@ -6,6 +6,8 @@ context, then generates the complete opinion piece.
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -15,6 +17,8 @@ from opinionforge.config import Settings
 from opinionforge.models.config import ImagePromptConfig, ModeBlendConfig, StanceConfig
 from opinionforge.models.piece import GeneratedPiece
 from opinionforge.models.topic import TopicContext
+
+logger = logging.getLogger(__name__)
 
 
 # Mandatory fixed disclaimer — not constructed dynamically from any profile data.
@@ -219,6 +223,94 @@ def _parse_generated_output(raw_output: str) -> tuple[str, str]:
     return title, body
 
 
+def _get_provider_name(client: LLMClient | None) -> str:
+    """Extract the provider/model name from an LLMClient if available.
+
+    Args:
+        client: The LLM client used for generation.
+
+    Returns:
+        A provider name string, or 'unknown' if not determinable.
+    """
+    from opinionforge.core.preview import ProviderLLMClient
+
+    if isinstance(client, ProviderLLMClient):
+        try:
+            return client.provider.model_name()  # type: ignore[union-attr]
+        except Exception:
+            return "unknown"
+    # Legacy clients
+    if hasattr(client, "_model"):
+        model = getattr(client, "_model", "unknown")
+        if "AnthropicLLMClient" in type(client).__name__:
+            return f"anthropic/{model}"
+        elif "OpenAILLMClient" in type(client).__name__:
+            return f"openai/{model}"
+    return "unknown"
+
+
+def _save_piece_to_storage(piece: GeneratedPiece, provider_name: str) -> None:
+    """Best-effort save of a generated piece to SQLite storage.
+
+    This function is non-blocking in spirit: if storage is unavailable
+    (e.g. first run, no DB file), the save silently fails and generation
+    still succeeds.
+
+    Args:
+        piece: The generated piece to persist.
+        provider_name: The provider/model identifier string.
+    """
+    try:
+        from opinionforge.storage import Database, PieceStore, get_db_path
+
+        db_path = get_db_path()
+
+        piece_data = {
+            "id": piece.id,
+            "topic": piece.topic.title,
+            "title": piece.title,
+            "subtitle": getattr(piece, "subtitle", None),
+            "body": piece.body,
+            "preview_text": piece.preview_text,
+            "mode": provider_name,
+            "mode_config": [
+                {"mode": m, "weight": w} for m, w in piece.mode_config.modes
+            ],
+            "stance_position": piece.stance.position,
+            "stance_intensity": piece.stance.intensity,
+            "target_length": piece.target_length,
+            "actual_length": piece.actual_length,
+            "sources": [s.model_dump() for s in piece.sources] if piece.sources else [],
+            "research_queries": piece.research_queries or [],
+            "disclaimer": piece.disclaimer,
+        }
+
+        async def _do_save() -> None:
+            async with Database(db_path) as db:
+                store = PieceStore(db)
+                await store.save(piece_data)
+
+        # Run the async save — handle the case where we may or may not
+        # be inside an existing event loop.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            # We're inside an event loop (e.g. web server) — schedule it
+            # as a fire-and-forget task so it doesn't block.
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                pool.submit(asyncio.run, _do_save()).result(timeout=5)
+        else:
+            asyncio.run(_do_save())
+
+    except Exception as exc:
+        logger.debug("Best-effort storage save failed: %s", exc)
+
+
 def generate_piece(
     topic: TopicContext,
     mode_config: ModeBlendConfig,
@@ -229,6 +321,8 @@ def generate_piece(
     image_config: ImagePromptConfig | None = None,
     client: LLMClient | None = None,
     settings: Settings | None = None,
+    provider_type: str | None = None,
+    model: str | None = None,
 ) -> GeneratedPiece:
     """Orchestrate full opinion piece generation.
 
@@ -236,6 +330,9 @@ def generate_piece(
     calls the LLM, and returns a structured GeneratedPiece with the mandatory
     fixed disclaimer. Optionally generates an image prompt when image_config
     is provided.
+
+    After successful generation, the piece is saved to SQLite storage
+    (best-effort -- if the database is unavailable, generation still succeeds).
 
     Args:
         topic: The normalized topic context.
@@ -248,6 +345,10 @@ def generate_piece(
             result is stored in the returned GeneratedPiece.
         client: Optional LLM client for dependency injection.
         settings: Optional settings override.
+        provider_type: Optional provider type override (e.g. 'ollama', 'anthropic').
+            When set, overrides the configured default provider for this run.
+        model: Optional model name override. When set, overrides the
+            configured default model for this run.
 
     Returns:
         A GeneratedPiece with title, body, preview_text, and the mandatory
@@ -275,7 +376,46 @@ def generate_piece(
 
     # Create LLM client if not injected
     if client is None:
-        client = create_llm_client(settings)
+        if provider_type is not None:
+            # Provider override: create a provider via the registry
+            from opinionforge.core.preview import create_llm_client_from_provider
+            from opinionforge.providers import get_provider
+
+            if settings is None:
+                from opinionforge.config import get_settings
+                settings = get_settings()
+
+            from opinionforge.models.config import ProviderConfig
+
+            resolved_model: str
+            resolved_api_key: str | None = None
+            resolved_base_url: str | None = None
+
+            if provider_type == "anthropic":
+                resolved_model = model or settings.opinionforge_model or "claude-sonnet-4-20250514"
+                resolved_api_key = settings.anthropic_api_key or ""
+            elif provider_type == "openai":
+                resolved_model = model or settings.opinionforge_model or "gpt-4o"
+                resolved_api_key = settings.openai_api_key or ""
+            elif provider_type == "ollama":
+                resolved_model = model or settings.opinionforge_model or "llama3"
+                resolved_base_url = settings.opinionforge_ollama_base_url
+            elif provider_type == "openai_compatible":
+                resolved_model = model or settings.opinionforge_model or "default"
+                resolved_base_url = settings.opinionforge_ollama_base_url
+            else:
+                resolved_model = model or settings.opinionforge_model or "default"
+
+            provider_config = ProviderConfig(
+                provider_type=provider_type,
+                model=resolved_model,
+                api_key=resolved_api_key or None,
+                base_url=resolved_base_url,
+            )
+            provider = get_provider(provider_config)
+            client = create_llm_client_from_provider(provider)
+        else:
+            client = create_llm_client(settings)
 
     # Build user prompt
     user_prompt = (
@@ -339,6 +479,9 @@ def generate_piece(
     # Count words
     actual_length = len(body.split())
 
+    # Determine provider name for metadata
+    provider_name = _get_provider_name(client)
+
     piece = GeneratedPiece(
         id=str(uuid.uuid4()),
         created_at=datetime.now(timezone.utc),
@@ -372,5 +515,8 @@ def generate_piece(
                 "image_platform": image_config.platform,
             }
         )
+
+    # Best-effort save to storage (non-blocking, never fails the generation)
+    _save_piece_to_storage(piece, provider_name)
 
     return piece

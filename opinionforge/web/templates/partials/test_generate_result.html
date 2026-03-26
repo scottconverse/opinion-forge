@@ -1,0 +1,29 @@
+{% if success %}
+<div class="test-generate-success">
+    <span class="status-icon status-success">&#10003;</span>
+    <h3>Everything is working!</h3>
+    {% if title %}
+    <p class="generated-title"><strong>{{ title }}</strong></p>
+    {% endif %}
+    <p class="generated-preview">{{ preview_text }}</p>
+</div>
+<script>
+    /* Show the finish button after successful generation */
+    var finishActions = document.getElementById('finish-actions');
+    if (finishActions) { finishActions.style.display = ''; }
+</script>
+{% else %}
+<div class="test-generate-error">
+    <span class="status-icon status-error">&#10007;</span>
+    <h3>Generation failed</h3>
+    <p class="error-detail">{{ error_message }}</p>
+    {% if fix_instruction %}
+    <p class="fix-instruction">{{ fix_instruction }}</p>
+    {% endif %}
+    <script>
+        /* Re-enable the test button so user can retry */
+        var btn = document.getElementById('test-generate-btn');
+        if (btn) { btn.disabled = false; }
+    </script>
+</div>
+{% endif %}

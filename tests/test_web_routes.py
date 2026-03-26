@@ -121,7 +121,7 @@ def test_about_returns_200(client: TestClient) -> None:
 def test_about_contains_version(client: TestClient) -> None:
     """GET /about mentions version info."""
     response = client.get("/about")
-    assert "1.0.0" in response.text
+    assert "2.0.0" in response.text
 
 
 # ---------------------------------------------------------------------------

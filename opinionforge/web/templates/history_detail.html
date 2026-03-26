@@ -1,0 +1,118 @@
+{% extends base_template|default("base.html") %}
+
+{% block title %}OpinionForge — {{ piece.title or 'Piece Detail' }}{% endblock %}
+
+{% block content %}
+<div class="history-detail">
+    <a href="/history" class="back-link">&larr; Back to History</a>
+
+    <div class="history-detail-layout">
+        {# ================================================================
+           Main Content
+           ================================================================ #}
+        <article class="history-detail-content">
+            <h1>{{ piece.title or 'Untitled' }}</h1>
+            {% if piece.subtitle %}
+            <p class="piece-subtitle">{{ piece.subtitle }}</p>
+            {% endif %}
+
+            <div class="piece-body">{{ piece.body | safe }}</div>
+
+            {% if piece.disclaimer %}
+            <footer class="disclaimer">{{ piece.disclaimer }}</footer>
+            {% endif %}
+        </article>
+
+        {# ================================================================
+           Metadata Sidebar
+           ================================================================ #}
+        <aside class="history-detail-sidebar">
+            <h4>Metadata</h4>
+            <dl class="metadata-list">
+                <dt>Mode</dt>
+                <dd><span class="category-badge {{ piece.mode or 'analytical' }}">{{ piece.mode or 'unknown' }}</span></dd>
+
+                <dt>Stance Position</dt>
+                <dd>{{ piece.stance_position if piece.stance_position is not none else 0 }}</dd>
+
+                <dt>Intensity</dt>
+                <dd>{{ piece.stance_intensity if piece.stance_intensity is not none else 0.5 }}</dd>
+
+                <dt>Word Count</dt>
+                <dd>{{ piece.actual_length or 0 }}</dd>
+
+                <dt>Provider</dt>
+                <dd>{{ piece.provider if piece.provider else 'N/A' }}</dd>
+
+                <dt>Generation Time</dt>
+                <dd>{% if piece.generation_time %}{{ piece.generation_time }}s{% else %}N/A{% endif %}</dd>
+
+                <dt>Generated</dt>
+                <dd>{{ piece.created_at[:19] if piece.created_at else 'Unknown' }}</dd>
+            </dl>
+
+            {# ================================================================
+               Re-export Buttons
+               ================================================================ #}
+            <h4>Export</h4>
+            <div class="export-buttons">
+                {% for fmt in ['substack', 'medium', 'wordpress', 'twitter'] %}
+                <button class="btn btn-sm btn-outline"
+                        hx-post="/history/{{ piece.id }}/export"
+                        hx-target="#export-output"
+                        hx-swap="innerHTML"
+                        hx-vals='{"format": "{{ fmt }}"}'>
+                    {{ fmt | capitalize }}
+                </button>
+                {% endfor %}
+            </div>
+            <div id="export-output"></div>
+
+            {# ================================================================
+               Export History
+               ================================================================ #}
+            <div id="export-history-area">
+                {% include "partials/export_history.html" %}
+            </div>
+
+            {# ================================================================
+               Delete Button
+               ================================================================ #}
+            <div class="detail-delete-section">
+                <button type="button" class="btn btn-sm btn-primary" onclick="confirmSingleDelete()">
+                    Delete Piece
+                </button>
+            </div>
+        </aside>
+    </div>
+</div>
+
+{# Delete Confirmation Dialog #}
+<div id="delete-confirm-dialog" class="confirm-dialog" style="display:none;">
+    <div class="confirm-dialog-backdrop" onclick="closeDeleteDialog()"></div>
+    <div class="confirm-dialog-box">
+        <h3>Confirm Deletion</h3>
+        <p>Are you sure you want to delete this piece? This action is irreversible.</p>
+        <div class="confirm-dialog-actions">
+            <button type="button" class="btn btn-sm btn-outline" onclick="closeDeleteDialog()">Cancel</button>
+            <button type="button" class="btn btn-sm btn-primary"
+                    hx-post="/history/{{ piece.id }}/delete"
+                    hx-target="body"
+                    onclick="closeDeleteDialog()">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmSingleDelete() {
+    document.getElementById('delete-confirm-dialog').style.display = 'flex';
+}
+function closeDeleteDialog() {
+    document.getElementById('delete-confirm-dialog').style.display = 'none';
+}
+</script>
+{% endblock %}
