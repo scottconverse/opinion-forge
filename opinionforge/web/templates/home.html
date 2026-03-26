@@ -1,0 +1,446 @@
+{% extends base_template|default("base.html") %}
+
+{% block title %}OpinionForge — Home{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <h1>OpinionForge</h1>
+    <p class="tagline">An editorial craft engine for opinion writing with precise rhetorical control</p>
+</div>
+
+<form id="generate-form" method="post">
+    {# ================================================================
+       Topic Input — Tabs for Text / URL / File
+       ================================================================ #}
+    <div class="form-group">
+        <label>Topic</label>
+        <div class="tabs">
+            <button type="button" class="tab-btn active" data-tab="tab-text">Text</button>
+            <button type="button" class="tab-btn" data-tab="tab-url">URL</button>
+            <button type="button" class="tab-btn" data-tab="tab-file">File</button>
+        </div>
+        <div id="tab-text" class="tab-panel active">
+            <textarea id="topic-text" name="topic" rows="4"
+                      placeholder="Enter your topic, thesis, or argument prompt..."></textarea>
+        </div>
+        <div id="tab-url" class="tab-panel">
+            <input type="url" id="topic-url" name="topic_url" placeholder="https://example.com/article-to-respond-to">
+        </div>
+        <div id="tab-file" class="tab-panel">
+            <input type="file" id="topic-file" name="topic_file" accept=".txt,.md,.pdf,.docx">
+        </div>
+    </div>
+
+    {# ================================================================
+       Mode Selector Grid — 12 modes by category
+       ================================================================ #}
+    <div class="form-group">
+        <label>Rhetorical Mode <span class="label-hint">Click one mode, or two to blend</span></label>
+
+        <input type="hidden" id="mode-input" name="mode" value="{{ selected_mode or 'analytical' }}">
+
+        {% for cat_name, cat_modes in categories.items() %}
+        <p class="section-title">{{ cat_name }}</p>
+        <div class="modes-grid">
+            {% for m in cat_modes %}
+            <div class="mode-card{% if m.id == (selected_mode or 'analytical') %} selected{% endif %}"
+                 data-mode-id="{{ m.id }}"
+                 onclick="selectMode(this)">
+                <span class="category-badge {{ m.category }}">{{ m.category }}</span>
+                <div class="mode-name">{{ m.display_name }}</div>
+                <p class="mode-desc">{{ m.description | truncate(120) }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div id="blend-controls" class="blend-controls">
+            <label>Blend Weights</label>
+            <div id="blend-sliders"></div>
+        </div>
+    </div>
+
+    {# ================================================================
+       Stance Slider
+       ================================================================ #}
+    <div class="slider-group">
+        <div class="slider-header">
+            <span class="slider-label">Stance</span>
+            <span class="slider-value" id="stance-value">0 — balanced</span>
+        </div>
+        <input type="range" id="stance" name="stance"
+               min="-100" max="100" value="{{ stance_default }}" step="1"
+               oninput="updateStanceLabel(this.value)">
+    </div>
+
+    {# ================================================================
+       Intensity Slider
+       ================================================================ #}
+    <div class="slider-group">
+        <div class="slider-header">
+            <span class="slider-label">Intensity</span>
+            <span class="slider-value" id="intensity-value">0.5 — moderate</span>
+        </div>
+        <input type="range" id="intensity" name="intensity"
+               min="0" max="1" value="{{ intensity_default }}" step="0.05"
+               oninput="updateIntensityLabel(this.value)">
+    </div>
+
+    {# ================================================================
+       Length Selector
+       ================================================================ #}
+    <div class="form-row">
+        <div class="form-group">
+            <label for="length">Length</label>
+            <select id="length" name="length" onchange="toggleCustomLength(this.value)">
+                <option value="short">Short (~400 words)</option>
+                <option value="standard" selected>Standard (~800 words)</option>
+                <option value="long">Long (~1200 words)</option>
+                <option value="essay">Essay (~2000 words)</option>
+                <option value="feature">Feature (~3000 words)</option>
+                <option value="custom">Custom word count</option>
+            </select>
+            <div id="custom-length-field" class="conditional-fields">
+                <input type="number" id="custom-length" name="custom_length"
+                       placeholder="Word count (e.g. 1500)" min="100" max="10000">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="export_format">Export Format</label>
+            <select id="export_format" name="export_format">
+                <option value="">Plain Text</option>
+                <option value="substack">Substack</option>
+                <option value="medium">Medium</option>
+                <option value="wordpress">WordPress</option>
+                <option value="twitter">Twitter Thread</option>
+            </select>
+        </div>
+    </div>
+
+    {# ================================================================
+       Image Prompt Toggle
+       ================================================================ #}
+    <div class="checkbox-group">
+        <input type="checkbox" id="image_prompt" name="image_prompt" value="true"
+               onchange="toggleImageFields(this.checked)">
+        <label for="image_prompt">Generate image prompt</label>
+    </div>
+    <div id="image-fields" class="conditional-fields">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="image_style">Image Style</label>
+                <select id="image_style" name="image_style">
+                    <option value="photorealistic">Photorealistic</option>
+                    <option value="editorial" selected>Editorial</option>
+                    <option value="cartoon">Cartoon</option>
+                    <option value="minimalist">Minimalist</option>
+                    <option value="vintage">Vintage</option>
+                    <option value="abstract">Abstract</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="image_platform">Image Platform</label>
+                <select id="image_platform" name="image_platform">
+                    <option value="substack" selected>Substack</option>
+                    <option value="medium">Medium</option>
+                    <option value="wordpress">WordPress</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="twitter">Twitter</option>
+                    <option value="instagram">Instagram</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {# ================================================================
+       Action Buttons
+       ================================================================ #}
+    <div class="actions-row">
+        <button type="button" id="generate-btn" class="btn btn-primary" disabled
+                onclick="startGeneration()">
+            Generate
+        </button>
+        <button type="button" class="btn btn-outline"
+                hx-get="/preview"
+                hx-target="#preview-area"
+                hx-swap="innerHTML"
+                hx-include="#generate-form"
+                hx-indicator="#preview-spinner">
+            Preview Tone
+            <span id="preview-spinner" class="htmx-indicator spinner"></span>
+        </button>
+    </div>
+</form>
+
+{# ================================================================
+   Results Area
+   ================================================================ #}
+<div class="results-area">
+    <div id="preview-area"></div>
+    <div id="progress-area"></div>
+    <div id="sse-container"></div>
+    <div id="result-area"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* --- Topic Tabs --- */
+var activeTab = 'tab-text';
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        var tabId = btn.getAttribute('data-tab');
+        activeTab = tabId;
+        document.getElementById(tabId).classList.add('active');
+        syncTopicFromActiveTab();
+    });
+});
+
+function syncTopicFromActiveTab() {
+    var topicField = document.getElementById('topic-text');
+    if (activeTab === 'tab-url') {
+        topicField.value = document.getElementById('topic-url').value;
+    }
+    /* For tab-text, the textarea is already the source of truth.
+       For tab-file, the file name is set on change (see below). */
+    checkTopic();
+}
+
+/* Sync URL input changes into the topic field */
+document.getElementById('topic-url').addEventListener('input', function() {
+    if (activeTab === 'tab-url') {
+        document.getElementById('topic-text').value = this.value;
+        checkTopic();
+    }
+});
+
+/* Sync file selection into the topic field (use filename as topic) */
+document.getElementById('topic-file').addEventListener('change', function() {
+    if (activeTab === 'tab-file' && this.files.length > 0) {
+        document.getElementById('topic-text').value = this.files[0].name;
+        checkTopic();
+    }
+});
+
+/* --- Mode Selection --- */
+var selectedModes = ['{{ selected_mode or "analytical" }}'];
+
+function selectMode(card) {
+    var modeId = card.getAttribute('data-mode-id');
+    var idx = selectedModes.indexOf(modeId);
+
+    if (idx !== -1) {
+        /* Deselect */
+        selectedModes.splice(idx, 1);
+        card.classList.remove('selected');
+    } else if (selectedModes.length < 2) {
+        /* Select */
+        selectedModes.push(modeId);
+        card.classList.add('selected');
+    } else {
+        /* Replace the first selection */
+        var first = selectedModes.shift();
+        document.querySelector('.mode-card[data-mode-id="' + first + '"]').classList.remove('selected');
+        selectedModes.push(modeId);
+        card.classList.add('selected');
+    }
+
+    updateModeInput();
+    updateBlendControls();
+}
+
+function updateModeInput() {
+    var input = document.getElementById('mode-input');
+    if (selectedModes.length === 0) {
+        input.value = 'analytical';
+    } else if (selectedModes.length === 1) {
+        input.value = selectedModes[0];
+    } else {
+        var w1 = parseInt(document.getElementById('blend-w1') ? document.getElementById('blend-w1').value : 50);
+        var w2 = 100 - w1;
+        input.value = selectedModes[0] + ':' + w1 + ',' + selectedModes[1] + ':' + w2;
+    }
+}
+
+function updateBlendControls() {
+    var bc = document.getElementById('blend-controls');
+    var container = document.getElementById('blend-sliders');
+    if (selectedModes.length === 2) {
+        bc.classList.add('visible');
+        container.innerHTML =
+            '<div class="blend-slider-row">' +
+            '  <span class="blend-name">' + selectedModes[0] + '</span>' +
+            '  <input type="range" id="blend-w1" min="10" max="90" value="50" step="5" oninput="updateBlend(this.value)">' +
+            '  <span class="blend-value" id="blend-v1">50%</span>' +
+            '</div>' +
+            '<div class="blend-slider-row">' +
+            '  <span class="blend-name">' + selectedModes[1] + '</span>' +
+            '  <input type="range" id="blend-w2" min="10" max="90" value="50" disabled>' +
+            '  <span class="blend-value" id="blend-v2">50%</span>' +
+            '</div>';
+    } else {
+        bc.classList.remove('visible');
+        container.innerHTML = '';
+    }
+}
+
+function updateBlend(v) {
+    var w1 = parseInt(v);
+    var w2 = 100 - w1;
+    document.getElementById('blend-v1').textContent = w1 + '%';
+    document.getElementById('blend-v2').textContent = w2 + '%';
+    document.getElementById('blend-w2').value = w2;
+    updateModeInput();
+}
+
+/* --- Stance Slider --- */
+function updateStanceLabel(val) {
+    var v = parseInt(val);
+    var desc;
+    if (v <= -75) desc = 'strongly equity-focused';
+    else if (v <= -40) desc = 'equity-focused';
+    else if (v <= -10) desc = 'leaning equity-focused';
+    else if (v < 10) desc = 'balanced';
+    else if (v < 40) desc = 'leaning liberty-focused';
+    else if (v < 75) desc = 'liberty-focused';
+    else desc = 'strongly liberty-focused';
+    document.getElementById('stance-value').textContent = v + ' \u2014 ' + desc;
+}
+
+/* --- Intensity Slider --- */
+function updateIntensityLabel(val) {
+    var v = parseFloat(val);
+    var desc;
+    if (v <= 0.2) desc = 'measured';
+    else if (v <= 0.45) desc = 'moderate';
+    else if (v <= 0.7) desc = 'forceful';
+    else desc = 'maximum conviction';
+    document.getElementById('intensity-value').textContent = v.toFixed(2) + ' \u2014 ' + desc;
+}
+
+/* --- Custom Length Toggle --- */
+function toggleCustomLength(val) {
+    var field = document.getElementById('custom-length-field');
+    if (val === 'custom') {
+        field.classList.add('visible');
+    } else {
+        field.classList.remove('visible');
+    }
+}
+
+/* --- Image Fields Toggle --- */
+function toggleImageFields(checked) {
+    var fields = document.getElementById('image-fields');
+    if (checked) {
+        fields.classList.add('visible');
+    } else {
+        fields.classList.remove('visible');
+    }
+}
+
+/* --- Generate Button Enable/Disable --- */
+var topicText = document.getElementById('topic-text');
+var genBtn = document.getElementById('generate-btn');
+
+function checkTopic() {
+    genBtn.disabled = !topicText.value.trim();
+}
+topicText.addEventListener('input', checkTopic);
+checkTopic();
+
+/* --- SSE Generation Flow (HTMX SSE extension) --- */
+function startGeneration() {
+    if (genBtn.disabled) return;
+
+    var progressArea = document.getElementById('progress-area');
+    var resultArea = document.getElementById('result-area');
+    var sseContainer = document.getElementById('sse-container');
+    resultArea.innerHTML = '';
+    progressArea.innerHTML =
+        '<div class="progress-stages" id="progress-stages">' +
+        '  <div class="progress-stage active" id="stage-researching">' +
+        '    <span class="stage-icon">1</span> Researching sources...' +
+        '  </div>' +
+        '  <div class="progress-stage" id="stage-generating">' +
+        '    <span class="stage-icon">2</span> Generating piece...' +
+        '  </div>' +
+        '  <div class="progress-stage" id="stage-screening">' +
+        '    <span class="stage-icon">3</span> Screening for originality...' +
+        '  </div>' +
+        '  <div class="progress-stage" id="stage-done">' +
+        '    <span class="stage-icon">4</span> Done.' +
+        '  </div>' +
+        '</div>';
+
+    /* Collect form data and build query string for GET endpoint */
+    var formData = new FormData(document.getElementById('generate-form'));
+    var length = formData.get('length');
+    if (length === 'custom') {
+        var custom = formData.get('custom_length');
+        if (custom) formData.set('length', custom);
+    }
+    var params = new URLSearchParams(formData).toString();
+    var sseUrl = '/generate/stream?' + params;
+
+    /* Build HTMX SSE-connected element */
+    sseContainer.innerHTML =
+        '<div hx-ext="sse" sse-connect="' + sseUrl + '">' +
+        '  <div sse-swap="progress" hx-swap="none"></div>' +
+        '  <div sse-swap="done" hx-target="#result-area" hx-swap="innerHTML"></div>' +
+        '  <div sse-swap="error" hx-target="#result-area" hx-swap="innerHTML"></div>' +
+        '</div>';
+
+    /* Let HTMX process the dynamically added SSE element */
+    htmx.process(sseContainer);
+}
+
+/* Listen for HTMX SSE events to update progress and handle done/error */
+document.body.addEventListener('htmx:sseMessage', function(evt) {
+    var eventName = evt.detail.type;
+    var data;
+    try {
+        data = JSON.parse(evt.detail.data);
+    } catch(e) { return; }
+
+    if (eventName === 'progress') {
+        setStageActive(data.stage);
+    } else if (eventName === 'done') {
+        setStageActive('done');
+        document.getElementById('result-area').innerHTML = data.html || '';
+        /* Close SSE connection */
+        document.getElementById('sse-container').innerHTML = '';
+    } else if (eventName === 'error') {
+        setStageActive(data.stage);
+        document.getElementById('result-area').innerHTML =
+            '<div class="error-message">' +
+            '  <p><strong>Error:</strong> ' + (data.message || 'An unexpected error occurred.') + '</p>' +
+            '</div>';
+        document.getElementById('sse-container').innerHTML = '';
+    }
+});
+
+function setStageActive(stage) {
+    var stages = ['researching', 'generating', 'screening', 'done'];
+    var idx = stages.indexOf(stage);
+    for (var i = 0; i < stages.length; i++) {
+        var el = document.getElementById('stage-' + stages[i]);
+        if (!el) continue;
+        if (i < idx) {
+            el.className = 'progress-stage completed';
+        } else if (i === idx) {
+            el.className = 'progress-stage active';
+        } else {
+            el.className = 'progress-stage';
+        }
+    }
+}
+
+/* Initialize slider labels */
+updateStanceLabel(document.getElementById('stance').value);
+updateIntensityLabel(document.getElementById('intensity').value);
+</script>
+{% endblock %}

@@ -17,6 +17,7 @@ An editorial craft engine for generating publication-ready opinion pieces with p
   - [modes](#modes--list-rhetorical-modes)
   - [export](#export--export-a-previously-generated-piece)
   - [config](#config--show-or-modify-configuration)
+- [Web UI](#web-ui)
 - [The 12 Rhetorical Modes](#the-12-rhetorical-modes)
 - [Mode Blending](#mode-blending)
 - [Stance and Intensity](#stance-and-intensity)
@@ -277,6 +278,49 @@ Without options, displays all current configuration values with API keys masked.
 | `--set KEY` | Configuration key to set. Settable keys: `opinionforge_llm_provider`, `opinionforge_search_provider` |
 
 API keys cannot be set via the CLI for security reasons. Set them in your `.env` file or as environment variables.
+
+---
+
+## Web UI
+
+OpinionForge includes a browser-based web interface built with FastAPI and HTMX for interactive opinion piece generation without using the command line.
+
+### Starting the Server
+
+```bash
+opinionforge serve
+```
+
+The web UI is available at **http://127.0.0.1:8000** by default.
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--host` | `-h` | `127.0.0.1` | Host to bind the web server to |
+| `--port` | `-p` | `8000` | Port to bind the web server to |
+
+Host and port can also be configured via `OPINIONFORGE_HOST` and `OPINIONFORGE_PORT` environment variables.
+
+### Web UI Features
+
+- **Home page** (`/`) -- Generation form with topic input (text, URL, or file), mode selector grid, stance slider, intensity slider, length presets, export format selection, and image prompt toggle
+- **Mode browser** (`/modes`) -- All 12 rhetorical modes displayed in a filterable grid organized by category, with links to individual mode detail pages
+- **Mode detail** (`/modes/{id}`) -- Full profile for each mode including rhetorical devices, prose patterns, vocabulary register, argument structure, and signature patterns
+- **About page** (`/about`) -- Project overview, the 12-mode system, stance and intensity controls, disclaimer policy, and how the generation pipeline works
+
+### Generation Flow
+
+When you submit a topic through the web form, OpinionForge streams progress via Server-Sent Events (SSE):
+
+1. **Researching** -- Preparing research context
+2. **Generating** -- Generating the opinion piece using the selected mode, stance, and intensity
+3. **Screening** -- Running originality screening
+4. **Done** -- Piece delivered with mandatory disclaimer
+
+If screening fails, an error event is returned instead of the blocked output.
+
+### Environment Variables
+
+The web UI uses the same environment variables as the CLI. No additional configuration is required beyond what is needed for CLI generation (`ANTHROPIC_API_KEY`, `OPINIONFORGE_LLM_PROVIDER`, etc.).
 
 ---
 
@@ -644,6 +688,11 @@ opinionforge/
 │   ├── mode.py             # ModeProfile, ProsePatterns, VocabularyRegister, ArgumentStructure
 │   ├── piece.py            # GeneratedPiece, ScreeningResult, SourceCitation
 │   └── topic.py            # TopicContext
+├── web/
+│   ├── app.py              # FastAPI application factory (create_app)
+│   ├── sse.py              # SSE streaming helper for generation pipeline
+│   ├── templates/          # Jinja2 templates (home, modes, about, partials)
+│   └── static/             # CSS and static assets
 ├── utils/
 │   ├── fetcher.py          # URL fetching with httpx + trafilatura extraction
 │   ├── search.py           # Search clients (Tavily, Brave, SerpAPI)
@@ -815,7 +864,7 @@ pip install -e ".[dev]"
 pytest tests/ -m "not slow"
 ```
 
-The test suite contains 1040 tests covering:
+The test suite contains 990 tests covering:
 
 - Unit tests for all core modules
 - Topic ingestion and normalization
@@ -827,6 +876,7 @@ The test suite contains 1040 tests covering:
 - Search client adapters
 - Text utility functions
 - CLI integration tests
+- Web UI integration, E2E, and HTMX tests
 
 All tests use mocked LLM and search clients -- no real API calls are made during testing.
 

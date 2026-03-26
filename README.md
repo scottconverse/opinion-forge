@@ -115,6 +115,35 @@ opinionforge modes --detail polemical
 
 ---
 
+## Web UI
+
+OpinionForge includes a browser-based web interface for interactive opinion piece generation.
+
+### Starting the Web Server
+
+```bash
+opinionforge serve
+```
+
+The web UI is available at **http://127.0.0.1:8000** by default.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--host`, `-h` | `127.0.0.1` | Host to bind the server to |
+| `--port`, `-p` | `8000` | Port to bind the server to |
+
+The web UI provides:
+
+- **Mode browser** — browse all 12 rhetorical modes with full profile details at `/modes`
+- **Topic input** — enter a topic, paste a URL, or upload a file
+- **Stance and intensity controls** — interactive sliders for real-time adjustment
+- **Generation with streaming progress** — SSE-powered progress indicators for each pipeline stage
+- **Export** — export generated pieces to Substack, Medium, WordPress, or Twitter format
+
+The web UI uses the same environment variables as the CLI (`ANTHROPIC_API_KEY`, `OPINIONFORGE_LLM_PROVIDER`, etc.). No additional configuration is required.
+
+---
+
 ## CLI Reference
 
 ### `write` — Generate an opinion piece
@@ -234,7 +263,7 @@ pip install -e ".[dev]"
 pytest tests/ -m "not slow"
 ```
 
-The test suite contains 1040 tests covering unit tests, integration tests, and end-to-end CLI tests. All tests use mocked LLM and search clients — no real API calls.
+The test suite contains 1098 tests (990 fast + 108 confusability) covering unit tests, integration tests, end-to-end CLI tests, web UI tests, and confusability regression tests. All fast tests use mocked LLM and search clients — no real API calls. Confusability tests require an API key and are excluded by default.
 
 ---
 
@@ -257,6 +286,7 @@ opinionforge/
 │   ├── profiles/           # 12 YAML mode profiles
 │   └── categories.yaml     # Category assignments
 ├── models/                 # Pydantic data models
+├── web/                    # FastAPI web UI (HTMX frontend, SSE streaming)
 └── data/                   # Suppressed phrases and structural fingerprints
 ```
 

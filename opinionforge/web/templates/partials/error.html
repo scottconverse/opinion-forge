@@ -1,0 +1,7 @@
+<div class="error-message">
+    {% if "screening" in (error | default("") | lower) or "originality" in (error | default("") | lower) %}
+    <p><strong>Screening Failure:</strong> This output did not pass originality screening. Please try regenerating with different settings or a revised topic.</p>
+    {% else %}
+    <p><strong>Error:</strong> {{ error }}</p>
+    {% endif %}
+</div>

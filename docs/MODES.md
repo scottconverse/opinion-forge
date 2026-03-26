@@ -251,6 +251,12 @@ A compressed, epigrammatic mode that delivers argument through maxims, paradoxes
 
 ---
 
+## Browsing Modes via the Web UI
+
+Modes can also be browsed interactively through the web interface. Start the web server with `opinionforge serve` and visit `/modes` to explore all 12 modes with full profile details, category filtering, and direct links to use each mode in the generation form.
+
+---
+
 ## Using Modes via the CLI
 
 ```bash

@@ -626,6 +626,13 @@ class TestErrorPropagation:
             ])
         assert result.exit_code == 4
 
+    def test_serve_command_help(self) -> None:
+        """'opinionforge serve --help' exits with code 0 and output contains --host and --port."""
+        result = runner.invoke(app, ["serve", "--help"])
+        assert result.exit_code == 0, f"Exit code {result.exit_code}: {result.stdout}"
+        assert "--host" in result.stdout
+        assert "--port" in result.stdout
+
     def test_missing_api_key_returns_exit_code_5(self) -> None:
         """Missing API key through CLI returns exit code 5.
 

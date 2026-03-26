@@ -1,0 +1,56 @@
+{% extends base_template|default("base.html") %}
+
+{% block title %}OpinionForge — Modes{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <h1>Rhetorical Modes</h1>
+    <p class="tagline">12 distinct rhetorical systems, each with its own prose patterns, argument structure, and signature devices</p>
+</div>
+
+{# Category filter buttons #}
+<div class="category-filters">
+    <button class="filter-btn active" onclick="filterModes('all', this)">All</button>
+    <button class="filter-btn" onclick="filterModes('confrontational', this)">Confrontational</button>
+    <button class="filter-btn" onclick="filterModes('investigative', this)">Investigative</button>
+    <button class="filter-btn" onclick="filterModes('deliberative', this)">Deliberative</button>
+    <button class="filter-btn" onclick="filterModes('literary', this)">Literary</button>
+</div>
+
+{% for cat_name, cat_modes in categories.items() %}
+<div class="mode-category-section" data-category="{{ cat_name }}">
+    <p class="section-title">{{ cat_name }}</p>
+    <div class="modes-grid">
+        {% for m in cat_modes %}
+        <a href="/modes/{{ m.id }}" class="mode-card" style="text-decoration:none; color:inherit;">
+            <span class="category-badge {{ m.category }}">{{ m.category }}</span>
+            <div class="mode-name">{{ m.display_name }}</div>
+            <p class="mode-desc">{{ m.description }}</p>
+            <div style="margin-top:0.5rem;">
+                {% for device in m.rhetorical_devices[:3] %}
+                <span style="font-size:0.75rem; color:var(--of-text-faint); font-family:var(--of-font-ui);">{{ device }}{% if not loop.last %} &middot; {% endif %}</span>
+                {% endfor %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterModes(category, btn) {
+    document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+
+    document.querySelectorAll('.mode-category-section').forEach(function(section) {
+        if (category === 'all' || section.getAttribute('data-category') === category) {
+            section.style.display = '';
+        } else {
+            section.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

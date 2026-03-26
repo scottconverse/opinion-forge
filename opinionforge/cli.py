@@ -717,6 +717,33 @@ def export(  # noqa: A001
 
 
 @app.command()
+def serve(
+    host: str = typer.Option(None, "--host", "-h", help="Host to bind the web server to."),
+    port: int = typer.Option(None, "--port", "-p", help="Port to bind the web server to."),
+) -> None:
+    """Start the OpinionForge web UI server.
+
+    Launches a FastAPI/uvicorn server for the web interface.
+    Defaults to host 127.0.0.1 and port 8000, configurable via
+    --host/--port flags or OPINIONFORGE_HOST/OPINIONFORGE_PORT
+    environment variables.
+    """
+    import uvicorn
+
+    from opinionforge.web.app import create_app
+
+    settings = get_settings()
+    resolved_host = host if host is not None else settings.opinionforge_host
+    resolved_port = port if port is not None else settings.opinionforge_port
+
+    web_app = create_app()
+    console.print(
+        f"[green]Starting OpinionForge web UI at http://{resolved_host}:{resolved_port}[/green]"
+    )
+    uvicorn.run(web_app, host=resolved_host, port=resolved_port)
+
+
+@app.command()
 def config(
     set_key: Optional[str] = typer.Option(None, "--set", help="Configuration key to set (format: KEY VALUE)."),
     set_value: Optional[str] = typer.Argument(None, help="Value for the --set key."),

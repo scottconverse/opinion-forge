@@ -1,0 +1,84 @@
+<article class="piece-result">
+    <h2>{{ title }}</h2>
+    {% if subtitle %}
+    <p class="piece-subtitle">{{ subtitle }}</p>
+    {% endif %}
+
+    <div class="piece-body">{{ body | safe }}</div>
+
+    {% if sources %}
+    <div class="piece-sources">
+        <h4>Sources</h4>
+        <ul>
+            {% for source in sources %}
+            <li>{{ source }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if image_prompt %}
+    <div class="image-prompt-section">
+        <h4>Image Prompt</h4>
+        <p>{{ image_prompt }}</p>
+    </div>
+    {% endif %}
+
+    <footer class="disclaimer">{{ disclaimer }}</footer>
+
+    <div class="result-actions">
+        <button class="btn-copy" onclick="copyToClipboard(this)" data-copy-target="piece-body-text">
+            Copy to Clipboard
+        </button>
+        <button class="btn btn-sm btn-outline"
+                hx-post="/export"
+                hx-target="#export-area"
+                hx-swap="innerHTML"
+                hx-vals='{"content": "{{ body | e }}", "title": "{{ title | e }}", "format": "substack"}'>
+            Export Substack
+        </button>
+        <button class="btn btn-sm btn-outline"
+                hx-post="/export"
+                hx-target="#export-area"
+                hx-swap="innerHTML"
+                hx-vals='{"content": "{{ body | e }}", "title": "{{ title | e }}", "format": "medium"}'>
+            Export Medium
+        </button>
+        <button class="btn btn-sm btn-outline"
+                hx-post="/export"
+                hx-target="#export-area"
+                hx-swap="innerHTML"
+                hx-vals='{"content": "{{ body | e }}", "title": "{{ title | e }}", "format": "wordpress"}'>
+            Export WordPress
+        </button>
+        <button class="btn btn-sm btn-outline"
+                hx-post="/export"
+                hx-target="#export-area"
+                hx-swap="innerHTML"
+                hx-vals='{"content": "{{ body | e }}", "title": "{{ title | e }}", "format": "twitter"}'>
+            Export Twitter
+        </button>
+    </div>
+    <div id="export-area"></div>
+
+    {# Hidden element for copy-to-clipboard #}
+    <textarea id="piece-body-text" style="position:absolute;left:-9999px;">{{ title }}
+
+{{ body }}
+
+{{ disclaimer }}</textarea>
+</article>
+
+<script>
+function copyToClipboard(btn) {
+    var text = document.getElementById('piece-body-text').value;
+    navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.textContent = 'Copy to Clipboard';
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+</script>

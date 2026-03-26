@@ -559,3 +559,96 @@ class TestParsedOutput:
             assert MANDATORY_DISCLAIMER in output, (
                 f"Mandatory disclaimer missing from {fmt} export"
             )
+
+
+# ---------------------------------------------------------------------------
+# Integration Tests: Web Pipeline Equivalence
+# ---------------------------------------------------------------------------
+
+
+class TestWebPipelineEquivalence:
+    """Tests verifying the web UI generation path uses the same pipeline as the CLI."""
+
+    def test_web_generate_calls_generate_piece_with_correct_config(self) -> None:
+        """POST /generate with a given mode/stance/intensity calls generate_piece() with
+        the equivalent ModeBlendConfig and StanceConfig that the CLI would construct."""
+        from fastapi.testclient import TestClient
+        from opinionforge.web.app import create_app
+
+        mock_llm = MagicMock()
+        mock_llm.generate.return_value = _MOCK_GENERATED
+        app = create_app(client=mock_llm)
+        client = TestClient(app)
+
+        captured_calls: list = []
+
+        def mock_generate(**kwargs):
+            captured_calls.append(kwargs)
+            # Return a valid piece
+            return generate_piece(
+                topic=kwargs["topic"],
+                mode_config=kwargs["mode_config"],
+                stance=kwargs["stance"],
+                target_length=kwargs.get("target_length", "standard"),
+                research_context=kwargs.get("research_context"),
+                client=mock_llm,
+            )
+
+        with patch("opinionforge.web.sse.generate_piece", side_effect=mock_generate):
+            response = client.post(
+                "/generate",
+                data={
+                    "topic": "AI and democracy",
+                    "mode": "polemical:60,analytical:40",
+                    "stance": "-30",
+                    "intensity": "0.7",
+                },
+            )
+
+        assert response.status_code == 200
+        assert len(captured_calls) == 1
+
+        call = captured_calls[0]
+        # Verify ModeBlendConfig matches what CLI would construct
+        assert call["mode_config"].modes == [("polemical", 60.0), ("analytical", 40.0)]
+        # Verify StanceConfig matches
+        assert call["stance"].position == -30
+        assert call["stance"].intensity == 0.7
+
+    def test_web_generate_runs_screening(self) -> None:
+        """The web UI generation path runs screen_output() (screening is not bypassed)."""
+        from fastapi.testclient import TestClient
+        from opinionforge.web.app import create_app
+
+        mock_llm = MagicMock()
+        mock_llm.generate.return_value = _MOCK_GENERATED
+        app = create_app(client=mock_llm)
+        client = TestClient(app)
+
+        with patch("opinionforge.core.similarity.screen_output") as mock_screen:
+            from opinionforge.models.piece import ScreeningResult
+            mock_screen.return_value = ScreeningResult(
+                passed=True,
+                verbatim_matches=0,
+                near_verbatim_matches=0,
+                suppressed_phrase_matches=0,
+                structural_fingerprint_score=0.1,
+                rewrite_iterations=0,
+                warning=None,
+            )
+            response = client.post(
+                "/generate",
+                data={
+                    "topic": "Screening pipeline test",
+                    "mode": "analytical",
+                    "stance": "0",
+                    "intensity": "0.5",
+                },
+            )
+
+        assert response.status_code == 200
+        # screen_output should have been called during generation
+        assert mock_screen.called, (
+            "screen_output() was not called during web UI generation — "
+            "screening is being bypassed"
+        )

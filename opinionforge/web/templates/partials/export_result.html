@@ -1,0 +1,24 @@
+<div class="export-result">
+    <div class="export-header">
+        <h3>Exported Content</h3>
+        {% if format %}
+        <span class="format-badge">{{ format }}</span>
+        {% endif %}
+        <button class="btn-copy" onclick="copyExport(this)">Copy</button>
+    </div>
+    <pre id="export-content">{{ exported_content }}</pre>
+</div>
+
+<script>
+function copyExport(btn) {
+    var text = document.getElementById('export-content').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.textContent = 'Copy';
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+</script>

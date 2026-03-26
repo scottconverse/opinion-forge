@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     opinionforge_search_api_key: str | None = None
     opinionforge_search_provider: Literal["tavily", "brave", "serpapi"] = "tavily"
+    opinionforge_host: str = "127.0.0.1"
+    opinionforge_port: int = 8000
 
     def require_llm_api_key(self) -> str:
         """Return the active LLM API key or exit with code 5 if not configured.

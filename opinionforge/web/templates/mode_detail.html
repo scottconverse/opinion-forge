@@ -1,0 +1,114 @@
+{% extends base_template|default("base.html") %}
+
+{% block title %}OpinionForge — {{ mode.display_name }}{% endblock %}
+
+{% block content %}
+<div class="mode-detail">
+    <h1>{{ mode.display_name }}</h1>
+
+    <div class="mode-meta">
+        <span class="category-badge {{ mode.category }}">{{ mode.category }}</span>
+    </div>
+
+    <p class="mode-description">{{ mode.description }}</p>
+
+    {# Rhetorical Devices #}
+    <div class="detail-section">
+        <h3>Rhetorical Devices</h3>
+        <ul class="device-list">
+            {% for device in mode.rhetorical_devices %}
+            <li>{{ device }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {# Prose Patterns #}
+    <div class="detail-section">
+        <h3>Prose Patterns</h3>
+        <div class="prose-grid">
+            <div class="prose-item">
+                <div class="prose-key">Sentence Length</div>
+                <div class="prose-val">{{ mode.prose_patterns.avg_sentence_length }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Paragraph Length</div>
+                <div class="prose-val">{{ mode.prose_patterns.paragraph_length }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Uses Fragments</div>
+                <div class="prose-val">{{ "Yes" if mode.prose_patterns.uses_fragments else "No" }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Uses Lists</div>
+                <div class="prose-val">{{ "Yes" if mode.prose_patterns.uses_lists else "No" }}</div>
+            </div>
+        </div>
+        <div class="detail-section" style="margin-top:0.5rem;">
+            <p><strong>Opening style:</strong> {{ mode.prose_patterns.opening_style }}</p>
+            <p><strong>Closing style:</strong> {{ mode.prose_patterns.closing_style }}</p>
+        </div>
+    </div>
+
+    {# Vocabulary Register #}
+    <div class="detail-section">
+        <h3>Vocabulary Register</h3>
+        <div class="prose-grid">
+            <div class="prose-item">
+                <div class="prose-key">Formality</div>
+                <div class="prose-val">{{ mode.vocabulary_register.formality }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Word Origin</div>
+                <div class="prose-val">{{ mode.vocabulary_register.word_origin_preference }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Jargon Level</div>
+                <div class="prose-val">{{ mode.vocabulary_register.jargon_level }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Humor</div>
+                <div class="prose-val">{{ mode.vocabulary_register.humor_frequency }}</div>
+            </div>
+        </div>
+    </div>
+
+    {# Argument Structure #}
+    <div class="detail-section">
+        <h3>Argument Structure</h3>
+        <div class="prose-grid">
+            <div class="prose-item">
+                <div class="prose-key">Approach</div>
+                <div class="prose-val">{{ mode.argument_structure.approach }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Evidence Style</div>
+                <div class="prose-val">{{ mode.argument_structure.evidence_style }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Concession Pattern</div>
+                <div class="prose-val">{{ mode.argument_structure.concession_pattern }}</div>
+            </div>
+            <div class="prose-item">
+                <div class="prose-key">Thesis Placement</div>
+                <div class="prose-val">{{ mode.argument_structure.thesis_placement }}</div>
+            </div>
+        </div>
+    </div>
+
+    {# Signature Patterns #}
+    <div class="detail-section">
+        <h3>Signature Patterns</h3>
+        <ul class="pattern-list">
+            {% for pattern in mode.signature_patterns %}
+            <li>{{ pattern }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {# Use This Mode Button #}
+    <div class="actions-row" style="margin-top:2rem;">
+        <a href="/?mode={{ mode.id }}" class="btn btn-primary">Use This Mode</a>
+        <a href="/modes" class="btn btn-outline">Back to All Modes</a>
+    </div>
+</div>
+{% endblock %}

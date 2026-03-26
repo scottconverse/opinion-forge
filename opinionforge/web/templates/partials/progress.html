@@ -1,0 +1,18 @@
+<div class="progress-stages">
+    <div class="progress-stage {% if stage == 'researching' %}active{% elif stage in ('generating', 'screening', 'done') %}completed{% endif %}">
+        <span class="stage-icon">{% if stage in ('generating', 'screening', 'done') %}&#10003;{% else %}1{% endif %}</span>
+        Researching sources...
+    </div>
+    <div class="progress-stage {% if stage == 'generating' %}active{% elif stage in ('screening', 'done') %}completed{% endif %}">
+        <span class="stage-icon">{% if stage in ('screening', 'done') %}&#10003;{% else %}2{% endif %}</span>
+        Generating piece...
+    </div>
+    <div class="progress-stage {% if stage == 'screening' %}active{% elif stage == 'done' %}completed{% endif %}">
+        <span class="stage-icon">{% if stage == 'done' %}&#10003;{% else %}3{% endif %}</span>
+        Screening for originality...
+    </div>
+    <div class="progress-stage {% if stage == 'done' %}active{% endif %}">
+        <span class="stage-icon">4</span>
+        Done.
+    </div>
+</div>
