@@ -65,6 +65,23 @@
       font-size: 0.9rem;
       line-height: 1.6;
     }
+    .screenshot-section {
+      margin: 2.5rem 0;
+    }
+    .screenshot-section img {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      margin: 1rem 0;
+    }
+    .screenshot-section .caption {
+      font-size: 0.9rem;
+      color: #555;
+      font-style: italic;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
     .feature-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -223,40 +240,42 @@
   </section>
 
   <section id="web-ui">
-    <h2>The Web UI</h2>
+    <h2>The Web Interface</h2>
     <p>OpinionForge runs as a local web application. Everything happens in your browser — no terminal required after the initial launch.</p>
 
-    <div class="feature-grid">
-      <div class="feature-card">
-        <span class="label">generate</span>
-        <h3>Write</h3>
-        <p>Enter a topic, select a mode, drag the stance and intensity sliders, and generate. Live SSE streaming shows progress through research, generation, and screening stages.</p>
-      </div>
-      <div class="feature-card">
-        <span class="label">browse</span>
-        <h3>Mode Browser</h3>
-        <p>Browse all 12 rhetorical modes with full descriptions, signature devices, and prose patterns. Filter by category. Click any mode to see its complete profile.</p>
-      </div>
-      <div class="feature-card">
-        <span class="label">history</span>
-        <h3>History</h3>
-        <p>Every piece is saved automatically. Search by keyword, filter by mode, stance range, or date. Re-export any piece to Substack, Medium, WordPress, or Twitter format.</p>
-      </div>
-      <div class="feature-card">
-        <span class="label">settings</span>
-        <h3>Settings</h3>
-        <p>Configure your LLM provider, model, search provider, default mode, stance, intensity, theme, and more. Test connections directly from the settings page.</p>
-      </div>
-      <div class="feature-card">
-        <span class="label">onboarding</span>
-        <h3>First-Run Setup</h3>
-        <p>Guided 5-step wizard: choose provider, enter API key, configure search, take a quick tour, generate a test piece. From install to first piece in under 5 minutes.</p>
-      </div>
-      <div class="feature-card">
-        <span class="label">export</span>
-        <h3>Platform Export</h3>
-        <p>Export to Substack (clean markdown), Medium (story format), WordPress (Gutenberg blocks), or Twitter (numbered thread with character limits).</p>
-      </div>
+    <div class="screenshot-section">
+      <h3>First-Run Setup</h3>
+      <p>First launch walks you through a guided 5-step wizard: choose your LLM provider, enter an API key (or select Ollama for free local use), configure search, take a quick tour, and generate a test piece. From install to first piece in under 5 minutes.</p>
+      <img src="images/ui-setup.png" alt="OpinionForge onboarding wizard — 5-step guided setup for provider selection, API key, and preferences">
+      <p class="caption">The onboarding wizard guides you through provider setup in 5 steps</p>
+    </div>
+
+    <div class="screenshot-section">
+      <h3>Mode Browser</h3>
+      <p>Browse all 12 rhetorical modes with full descriptions, signature devices, and prose patterns. Filter by category — Confrontational, Investigative, Deliberative, Literary. Click any mode to see its complete profile with rhetorical devices, sentence structure, and paragraph patterns.</p>
+      <img src="images/ui-modes.png" alt="OpinionForge mode browser — 12 rhetorical modes organized by category with filter pills">
+      <p class="caption">Browse and filter all 12 rhetorical modes by category</p>
+    </div>
+
+    <div class="screenshot-section">
+      <h3>Mode Detail</h3>
+      <p>Each mode has a full profile page showing its rhetorical devices, prose patterns (sentence length, paragraph style, vocabulary register), and a complete description of the argumentative approach.</p>
+      <img src="images/ui-mode-detail.png" alt="OpinionForge mode detail page — Polemical mode showing rhetorical devices and prose patterns">
+      <p class="caption">Full profile for the Polemical mode — rhetorical devices, prose patterns, and more</p>
+    </div>
+
+    <div class="screenshot-section">
+      <h3>History</h3>
+      <p>Every piece is saved automatically to a local SQLite database. Search by keyword, filter by mode, stance range, or date. Bulk select and delete. Click any piece to re-read it or re-export to a different platform format.</p>
+      <img src="images/ui-history.png" alt="OpinionForge history page — search, filter, and manage all generated pieces">
+      <p class="caption">Search, filter, and manage your entire library of generated pieces</p>
+    </div>
+
+    <div class="screenshot-section">
+      <h3>Settings</h3>
+      <p>Configure your LLM provider and model, enter API keys (encrypted at rest), set up a search provider for source research, and customize your defaults — mode, stance, intensity, length, and theme. Test connections directly from the settings page.</p>
+      <img src="images/ui-settings.png" alt="OpinionForge settings page — provider selection, model config, API key entry">
+      <p class="caption">Configure providers, models, and preferences — all from the browser</p>
     </div>
   </section>
 
