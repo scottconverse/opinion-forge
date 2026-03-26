@@ -33,9 +33,7 @@
       margin: 0 auto;
       padding: 2rem;
     }
-    section {
-      margin: 3rem 0;
-    }
+    section { margin: 3rem 0; }
     h2 {
       font-size: 1.8rem;
       margin-bottom: 1rem;
@@ -67,6 +65,37 @@
       font-size: 0.9rem;
       line-height: 1.6;
     }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .feature-card {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 1.2rem;
+    }
+    .feature-card h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.1rem;
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      color: #444;
+      margin: 0;
+    }
+    .feature-card .label {
+      display: inline-block;
+      background: #f0f0ec;
+      color: #555;
+      font-size: 0.75em;
+      padding: 0.15em 0.5em;
+      border-radius: 3px;
+      margin-bottom: 0.6rem;
+      font-family: 'Courier New', monospace;
+    }
     .modes-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -78,12 +107,6 @@
       border: 1px solid #ddd;
       border-radius: 6px;
       padding: 1.2rem;
-    }
-    .mode-card .mode-id {
-      font-family: 'Courier New', monospace;
-      font-size: 0.85em;
-      color: #666;
-      margin-bottom: 0.3rem;
     }
     .mode-card h3 {
       margin: 0 0 0.5rem;
@@ -144,6 +167,15 @@
       font-family: 'Courier New', monospace;
       font-size: 0.85rem;
     }
+    .hero-cta {
+      text-align: center;
+      margin: 2rem 0;
+    }
+    .hero-cta pre {
+      display: inline-block;
+      font-size: 1.1rem;
+      padding: 1rem 2rem;
+    }
     footer {
       background: #1a1a1a;
       color: #888;
@@ -155,7 +187,7 @@
     footer a { color: #aaa; }
     @media (max-width: 600px) {
       header h1 { font-size: 2rem; }
-      .modes-grid { grid-template-columns: 1fr; }
+      .feature-grid, .modes-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -163,84 +195,125 @@
 
 <header>
   <h1>OpinionForge</h1>
-  <p class="tagline">An editorial craft engine for opinion writing with precise rhetorical control</p>
+  <p class="tagline">A local desktop editorial craft engine for AI-assisted opinion writing</p>
 </header>
 
 <div class="container">
 
   <section id="what-it-is">
     <h2>What It Is</h2>
-    <p>OpinionForge is an AI-powered editorial craft engine for generating publication-ready opinion pieces — op-eds, columns, and long-form opinion content. It is built around 12 distinct <strong>rhetorical modes</strong> that define argumentative approach, prose style, and rhetorical devices.</p>
-    <p>OpinionForge gives you three independent controls over how your piece is written:</p>
+    <p>OpinionForge is a local desktop application for generating publication-ready opinion pieces — op-eds, columns, and long-form opinion content — with precise rhetorical control. Install it, open it in your browser, and write. No account. No subscription. No server to maintain.</p>
+    <p>You control three dimensions of every piece:</p>
     <ul>
-      <li><strong>Mode</strong> — the rhetorical approach (e.g., polemical, analytical, satirical)</li>
-      <li><strong>Stance</strong> — argumentative emphasis direction from -100 (equity-focused) to +100 (liberty-focused)</li>
+      <li><strong>Mode</strong> — the rhetorical approach (polemical, analytical, satirical, and 9 more)</li>
+      <li><strong>Stance</strong> — argumentative emphasis from -100 (equity-focused) to +100 (liberty-focused)</li>
       <li><strong>Intensity</strong> — rhetorical heat from 0.0 (measured) to 1.0 (maximum conviction)</li>
     </ul>
-    <p>This is a tool for improving your own rhetoric — not for imitating anyone else's. Choose a mode based on what the argument demands, not who you want to sound like.</p>
+    <p>Bring your own LLM — Ollama for free local generation, or Claude/GPT-4o via API. OpinionForge provides the rhetorical intelligence; your LLM provides the words.</p>
   </section>
 
-  <section id="install">
-    <h2>Installation</h2>
+  <section id="get-started">
+    <h2>Get Started</h2>
     <div class="install-block">pip install opinionforge</div>
-    <p>Requires Python 3.11+. Configure your API key before using:</p>
-    <pre>export ANTHROPIC_API_KEY=your-key-here
-# or for OpenAI:
-export OPENAI_API_KEY=your-key-here
-export OPINIONFORGE_LLM_PROVIDER=openai</pre>
+    <div class="hero-cta">
+      <pre>opinionforge serve</pre>
+    </div>
+    <p>Open <strong>http://127.0.0.1:8000</strong> in your browser. That's it.</p>
+    <p>First launch walks you through a guided setup: choose your LLM provider, enter an API key (or select Ollama for free local use), set your defaults, and generate a test piece — all in the browser.</p>
   </section>
 
-  <section id="quick-start">
-    <h2>Quick Start</h2>
-    <h3>Web UI</h3>
-    <pre># Launch the web interface
-opinionforge serve</pre>
-    <p>Open <strong>http://127.0.0.1:8000</strong> — browse modes, drag the stance and intensity sliders, generate with live streaming progress, and export to any platform format. Everything in the browser.</p>
+  <section id="web-ui">
+    <h2>The Web UI</h2>
+    <p>OpinionForge runs as a local web application. Everything happens in your browser — no terminal required after the initial launch.</p>
 
-    <h3>CLI</h3>
-    <pre># Generate with a specific rhetorical mode
-opinionforge write "The rise of algorithmic governance" \
-  --mode polemical \
-  --no-preview
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="label">generate</span>
+        <h3>Write</h3>
+        <p>Enter a topic, select a mode, drag the stance and intensity sliders, and generate. Live SSE streaming shows progress through research, generation, and screening stages.</p>
+      </div>
+      <div class="feature-card">
+        <span class="label">browse</span>
+        <h3>Mode Browser</h3>
+        <p>Browse all 12 rhetorical modes with full descriptions, signature devices, and prose patterns. Filter by category. Click any mode to see its complete profile.</p>
+      </div>
+      <div class="feature-card">
+        <span class="label">history</span>
+        <h3>History</h3>
+        <p>Every piece is saved automatically. Search by keyword, filter by mode, stance range, or date. Re-export any piece to Substack, Medium, WordPress, or Twitter format.</p>
+      </div>
+      <div class="feature-card">
+        <span class="label">settings</span>
+        <h3>Settings</h3>
+        <p>Configure your LLM provider, model, search provider, default mode, stance, intensity, theme, and more. Test connections directly from the settings page.</p>
+      </div>
+      <div class="feature-card">
+        <span class="label">onboarding</span>
+        <h3>First-Run Setup</h3>
+        <p>Guided 5-step wizard: choose provider, enter API key, configure search, take a quick tour, generate a test piece. From install to first piece in under 5 minutes.</p>
+      </div>
+      <div class="feature-card">
+        <span class="label">export</span>
+        <h3>Platform Export</h3>
+        <p>Export to Substack (clean markdown), Medium (story format), WordPress (Gutenberg blocks), or Twitter (numbered thread with character limits).</p>
+      </div>
+    </div>
+  </section>
 
-# Choose stance and intensity
-opinionforge write "Climate policy tradeoffs" \
-  --mode analytical \
-  --stance -20 \
-  --intensity 0.4
-
-# Blend two modes
-opinionforge write "Technology regulation" \
-  --mode satirical:60,forensic:40 \
-  --no-preview
-
-# Export to Substack format
-opinionforge write "The attention economy" \
-  --mode analytical \
-  --export substack \
-  --no-preview</pre>
+  <section id="providers">
+    <h2>LLM Providers</h2>
+    <p>OpinionForge is provider-agnostic. Use whatever LLM you already have:</p>
+    <table class="flags-table">
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Cost</th>
+          <th>Setup</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Ollama (local)</td>
+          <td>Free</td>
+          <td>Install Ollama, pull a model, select in settings</td>
+        </tr>
+        <tr>
+          <td>Anthropic (Claude)</td>
+          <td>Per-token</td>
+          <td>Enter API key in settings</td>
+        </tr>
+        <tr>
+          <td>OpenAI (GPT-4o)</td>
+          <td>Per-token</td>
+          <td>Enter API key in settings</td>
+        </tr>
+        <tr>
+          <td>OpenAI-compatible</td>
+          <td>Varies</td>
+          <td>Enter API key + base URL in settings</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Switch providers at any time from the Settings page or via CLI flags. All providers use the same rhetorical mode system — the modes control the argument structure and prose style regardless of which LLM generates the text.</p>
   </section>
 
   <section id="modes">
     <h2>The 12 Rhetorical Modes</h2>
-    <p>Each mode is a self-contained rhetorical system with its own prose patterns, argument structure, and signature devices. Use <code>opinionforge modes --detail &lt;mode-id&gt;</code> for full details on any mode.</p>
+    <p>Each mode is a self-contained rhetorical system with its own prose patterns, argument structure, and signature devices.</p>
 
     <h3>Confrontational</h3>
     <div class="modes-grid">
       <div class="mode-card">
-        <div class="mode-id">--mode polemical</div>
         <h3>Polemical</h3>
         <span class="category">confrontational</span>
-        <p>Combative moral urgency. Names targets, indicts positions as contemptible, demands the reader choose sides.</p>
+        <p>Combative moral urgency. Names targets, indicts positions, demands the reader choose sides.</p>
       </div>
       <div class="mode-card">
-        <div class="mode-id">--mode populist</div>
         <h3>Populist</h3>
         <span class="category">confrontational</span>
         <p>Plain-spoken, us-versus-them. Amplifies ordinary voices against remote, impersonal power.</p>
       </div>
       <div class="mode-card">
-        <div class="mode-id">--mode provocative</div>
         <h3>Provocative</h3>
         <span class="category">confrontational</span>
         <p>Deliberately unsettling. States unfashionable truths and forces readers to face uncomfortable implications.</p>
@@ -250,13 +323,11 @@ opinionforge write "The attention economy" \
     <h3>Investigative</h3>
     <div class="modes-grid">
       <div class="mode-card">
-        <div class="mode-id">--mode forensic</div>
         <h3>Forensic</h3>
         <span class="category">investigative</span>
-        <p>Evidence-first. Assembles documentary proof, follows the money, builds a prosecutorial case from primary sources.</p>
+        <p>Evidence-first. Assembles documentary proof, follows the money, builds a prosecutorial case.</p>
       </div>
       <div class="mode-card">
-        <div class="mode-id">--mode data_driven</div>
         <h3>Data-Driven</h3>
         <span class="category">investigative</span>
         <p>Quantitative. Leads with numbers, visualizes trends, anchors every claim in empirical precision.</p>
@@ -266,47 +337,40 @@ opinionforge write "The attention economy" \
     <h3>Deliberative</h3>
     <div class="modes-grid">
       <div class="mode-card">
-        <div class="mode-id">--mode analytical</div>
         <h3>Analytical</h3>
         <span class="category">deliberative</span>
-        <p>Rigorous, evidence-first. Breaks complex issues into parts, weighs explanations, arrives at measured conclusions.</p>
+        <p>Rigorous, evidence-first. Breaks complex issues into parts and arrives at measured conclusions.</p>
       </div>
       <div class="mode-card">
-        <div class="mode-id">--mode dialectical</div>
         <h3>Dialectical</h3>
         <span class="category">deliberative</span>
         <p>Thesis-antithesis-synthesis. Takes opposing arguments seriously and arrives at positions through genuine engagement.</p>
       </div>
       <div class="mode-card">
-        <div class="mode-id">--mode measured</div>
         <h3>Measured</h3>
         <span class="category">deliberative</span>
-        <p>Calm, earned authority. Conveys confidence through restraint and precision. Claims only what the evidence warrants.</p>
+        <p>Calm, earned authority. Conveys confidence through restraint and precision.</p>
       </div>
     </div>
 
     <h3>Literary</h3>
     <div class="modes-grid">
       <div class="mode-card">
-        <div class="mode-id">--mode satirical</div>
         <h3>Satirical</h3>
         <span class="category">literary</span>
         <p>Irony, exaggeration, comic incongruity. The argument is made by letting the target's logic destroy itself.</p>
       </div>
       <div class="mode-card">
-        <div class="mode-id">--mode oratorical</div>
         <h3>Oratorical</h3>
         <span class="category">literary</span>
         <p>Grand, elevated. Deploys the full arsenal of classical rhetoric — anaphora, periodic sentences, tricolon.</p>
       </div>
       <div class="mode-card">
-        <div class="mode-id">--mode narrative</div>
         <h3>Narrative</h3>
         <span class="category">literary</span>
         <p>Story-first. Uses scene, character, and testimony to make abstract arguments vivid and emotionally resonant.</p>
       </div>
       <div class="mode-card">
-        <div class="mode-id">--mode aphoristic</div>
         <h3>Aphoristic</h3>
         <span class="category">literary</span>
         <p>Compressed, epigrammatic. Delivers argument through maxims and paradoxes. Every word carries maximum weight.</p>
@@ -314,61 +378,38 @@ opinionforge write "The attention economy" \
     </div>
   </section>
 
-  <section id="controls">
-    <h2>Controls: --mode, --stance, --intensity</h2>
-    <p>OpinionForge separates <em>what rhetorical approach to use</em> from <em>how to position the argument</em> and <em>how forcefully to argue it</em>:</p>
-
-    <table class="flags-table">
-      <thead>
-        <tr>
-          <th>Flag</th>
-          <th>Range</th>
-          <th>Default</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>--mode</td>
-          <td>mode ID or blend</td>
-          <td>analytical</td>
-          <td>Rhetorical approach. Single mode or colon-separated blend (e.g., <code>polemical:60,analytical:40</code>)</td>
-        </tr>
-        <tr>
-          <td>--stance</td>
-          <td>-100 to +100</td>
-          <td>0</td>
-          <td>Argumentative emphasis: -100 (equity-focused) to +100 (liberty-focused). 0 = balanced</td>
-        </tr>
-        <tr>
-          <td>--intensity</td>
-          <td>0.0 to 1.0</td>
-          <td>0.5</td>
-          <td>Rhetorical heat: 0.0 = measured and deliberative, 1.0 = maximum conviction</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <pre>opinionforge write "Immigration and labor markets" \
-  --mode forensic \
-  --stance -40 \
-  --intensity 0.7 \
-  --no-preview</pre>
+  <section id="storage">
+    <h2>Local Storage</h2>
+    <p>Everything is stored locally in a SQLite database on your machine. No cloud. No telemetry. No account.</p>
+    <ul>
+      <li><strong>Pieces</strong> — every generated piece with full metadata (topic, mode, stance, sources, screening results)</li>
+      <li><strong>Exports</strong> — export records linked to their parent pieces</li>
+      <li><strong>Settings</strong> — provider config, preferences, custom defaults</li>
+      <li><strong>Encryption</strong> — API keys are encrypted at rest</li>
+    </ul>
   </section>
 
-  <section id="export">
-    <h2>Export Formats</h2>
-    <p>Use the <code>--export</code> flag to produce platform-optimized output:</p>
-    <ul>
-      <li><code>--export substack</code> — Clean ATX markdown, no HTML tags</li>
-      <li><code>--export medium</code> — Medium-style markdown with DROP CAP and story formatting</li>
-      <li><code>--export wordpress</code> — Gutenberg block markup for direct paste</li>
-      <li><code>--export twitter</code> — Numbered tweet thread with 280-character limits</li>
-    </ul>
-    <pre>opinionforge write "The state of journalism" \
-  --mode oratorical \
-  --export substack \
-  --no-preview</pre>
+  <section id="desktop">
+    <h2>Desktop App</h2>
+    <pre>pip install opinionforge[desktop]
+opinionforge desktop</pre>
+    <p>Launches a system tray icon with one-click access to start and stop the web server, open the browser, and quit the application. Runs in the background until you close it.</p>
+  </section>
+
+  <section id="cli">
+    <h2>CLI</h2>
+    <p>Everything in the web UI is also available from the command line:</p>
+    <pre># Generate a piece
+opinionforge write "The rise of algorithmic governance" --mode polemical
+
+# Specify provider and model
+opinionforge write "Local journalism" --provider ollama --model llama3
+
+# Blend two modes
+opinionforge write "Tech regulation" --mode satirical:60,forensic:40
+
+# Export to Substack
+opinionforge write "The attention economy" --mode analytical --export substack</pre>
   </section>
 
   <section id="disclaimer-policy">
@@ -377,75 +418,13 @@ opinionforge write "The attention economy" \
     <div class="disclaimer-box">
       <p><em>This piece was generated with AI-assisted rhetorical controls. It is original content and is not written by, endorsed by, or affiliated with any real person.</em></p>
     </div>
-    <p>This policy exists because OpinionForge generates original AI content with a defined rhetorical character. The disclaimer ensures readers understand what they are reading. It is not negotiable.</p>
-  </section>
-
-  <section id="new-in-v2">
-    <h2>New in v2.0.0</h2>
-    <ul>
-      <li><strong>Multi-provider LLM support</strong> — Anthropic, OpenAI, Ollama, and OpenAI-compatible endpoints. Switch providers at runtime via CLI flags or the settings UI</li>
-      <li><strong>Local SQLite storage</strong> — All generated pieces, exports, and settings persist automatically in a platform-appropriate data directory</li>
-      <li><strong>History</strong> — Browse, search, filter, and re-export past pieces through the web UI</li>
-      <li><strong>Settings UI</strong> — Configure provider, model, defaults, and theme from the browser</li>
-      <li><strong>Desktop app mode</strong> — System tray icon with one-click server start and browser launch</li>
-      <li><strong>First-run onboarding</strong> — Guided setup for API key, provider selection, and default preferences</li>
-      <li><strong>API key encryption</strong> — Keys stored at rest are encrypted</li>
-    </ul>
-  </section>
-
-  <section id="providers">
-    <h2>LLM Providers</h2>
-    <table class="flags-table">
-      <thead>
-        <tr>
-          <th>Provider</th>
-          <th>Config Value</th>
-          <th>Requirements</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Anthropic</td>
-          <td>anthropic</td>
-          <td>ANTHROPIC_API_KEY</td>
-        </tr>
-        <tr>
-          <td>OpenAI</td>
-          <td>openai</td>
-          <td>OPENAI_API_KEY</td>
-        </tr>
-        <tr>
-          <td>Ollama</td>
-          <td>ollama</td>
-          <td>Local Ollama server</td>
-        </tr>
-        <tr>
-          <td>OpenAI-compatible</td>
-          <td>openai_compatible</td>
-          <td>OPENAI_API_KEY + base URL</td>
-        </tr>
-      </tbody>
-    </table>
-    <pre>opinionforge write "Topic" --provider ollama --model llama3</pre>
-  </section>
-
-  <section id="storage">
-    <h2>Local Storage</h2>
-    <p>OpinionForge stores all data in a local SQLite database. Every generated piece, export record, and user preference is persisted automatically. API keys are encrypted at rest.</p>
-    <p>The database lives in the platform-standard location: <code>~/.local/share/opinionforge/</code> on Linux, <code>~/Library/Application Support/opinionforge/</code> on macOS, or <code>%LOCALAPPDATA%/opinionforge/</code> on Windows.</p>
-  </section>
-
-  <section id="desktop">
-    <h2>Desktop App</h2>
-    <pre>pip install opinionforge[desktop]
-opinionforge desktop</pre>
-    <p>Launches a system tray icon with one-click access to start and stop the web server, open the browser, and quit the application.</p>
+    <p>This is by design. OpinionForge generates original AI content with a defined rhetorical character. Readers deserve to know what they are reading.</p>
   </section>
 
   <section id="docs">
     <h2>Documentation</h2>
     <ul>
-      <li><a href="MODES.md">Full Mode Catalog (docs/MODES.md)</a> — Detailed descriptions, rhetorical devices, and prose patterns for all 12 modes</li>
+      <li><a href="MODES.md">Full Mode Catalog</a> — Detailed descriptions, rhetorical devices, and prose patterns for all 12 modes</li>
       <li><a href="terms.html">Terms of Service</a></li>
     </ul>
   </section>
