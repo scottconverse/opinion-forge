@@ -1,6 +1,6 @@
 # OpinionForge — Rhetorical Mode Catalog
 
-OpinionForge v1.0.0 ships with 12 rhetorical modes organized into four categories. Each mode defines a distinct argumentative approach, prose style, and rhetorical toolkit.
+OpinionForge ships with 12 rhetorical modes organized into four categories. Each mode defines a distinct argumentative approach, prose style, and rhetorical toolkit.
 
 Use the `--mode` flag to select a mode when generating a piece:
 

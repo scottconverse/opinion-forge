@@ -1,8 +1,8 @@
 # OpinionForge — Extended Documentation
 
-**Version 1.0.0** | **Python 3.11+** | **MIT License**
+**Version 2.0.0** | **Python 3.11+** | **MIT License**
 
-An editorial craft engine for generating publication-ready opinion pieces with precise rhetorical control.
+A local desktop editorial craft engine for generating publication-ready opinion pieces with precise rhetorical control. Runs in your browser, stores everything locally, connects to any LLM.
 
 ---
 
@@ -11,13 +11,16 @@ An editorial craft engine for generating publication-ready opinion pieces with p
 - [Overview](#overview)
 - [Installation](#installation)
 - [Quick Start Tutorial](#quick-start-tutorial)
+- [Web UI](#web-ui)
+- [LLM Providers](#llm-providers)
+- [Local Storage](#local-storage)
+- [Desktop App](#desktop-app)
 - [CLI Reference](#cli-reference)
   - [write](#write--generate-an-opinion-piece)
   - [preview](#preview--generate-a-tone-preview)
   - [modes](#modes--list-rhetorical-modes)
   - [export](#export--export-a-previously-generated-piece)
   - [config](#config--show-or-modify-configuration)
-- [Web UI](#web-ui)
 - [The 12 Rhetorical Modes](#the-12-rhetorical-modes)
 - [Mode Blending](#mode-blending)
 - [Stance and Intensity](#stance-and-intensity)
@@ -74,6 +77,22 @@ OpinionForge installs the following dependencies automatically:
 - `tavily-python>=0.3` -- Tavily search API client
 - `pyyaml>=6.0` -- YAML profile parsing
 - `python-dotenv>=1.0` -- .env file loading
+- `fastapi>=0.110` -- Web framework
+- `uvicorn[standard]>=0.27` -- ASGI server
+- `jinja2>=3.1` -- Template engine
+- `sse-starlette>=1.6` -- Server-sent events for streaming
+- `aiosqlite>=0.19` -- Async SQLite for local storage
+- `platformdirs>=4.0` -- Platform-appropriate data directories
+- `cryptography>=41.0` -- API key encryption at rest
+
+Optional desktop extras (system tray icon):
+
+```bash
+pip install opinionforge[desktop]
+```
+
+- `pystray>=0.19` -- System tray integration
+- `Pillow>=10.0` -- Tray icon rendering
 
 ### Development dependencies
 
@@ -85,24 +104,27 @@ Development extras include pytest, pytest-asyncio, pytest-mock, ruff, mypy, and 
 
 ### API Key Setup
 
-Before generating content, configure at least one LLM API key:
+Configure your LLM provider. You can do this via environment variables, a `.env` file, or through the web UI Settings page:
 
 ```bash
-# For Anthropic (default provider):
+# For Anthropic (default cloud provider):
 export ANTHROPIC_API_KEY=your-key-here
 
-# Or for OpenAI:
+# For OpenAI:
 export OPENAI_API_KEY=your-key-here
 export OPINIONFORGE_LLM_PROVIDER=openai
+
+# For Ollama (free, local, no API key needed):
+export OPINIONFORGE_LLM_PROVIDER=ollama
 ```
 
-For source research, also configure a search API key:
+For source research, optionally configure a search API key:
 
 ```bash
 export OPINIONFORGE_SEARCH_API_KEY=your-tavily-key-here
 ```
 
-You can also place these in a `.env` file in your working directory.
+Or skip environment variables entirely — the first-run onboarding wizard in the web UI will walk you through all of this.
 
 ---
 
@@ -283,7 +305,7 @@ API keys cannot be set via the CLI for security reasons. Set them in your `.env`
 
 ## Web UI
 
-OpinionForge includes a browser-based web interface built with FastAPI and HTMX for interactive opinion piece generation without using the command line.
+The web UI is the primary interface for OpinionForge. It runs locally in your browser — no terminal needed after the initial launch.
 
 ### Starting the Server
 
@@ -298,14 +320,15 @@ The web UI is available at **http://127.0.0.1:8000** by default.
 | `--host` | `-h` | `127.0.0.1` | Host to bind the web server to |
 | `--port` | `-p` | `8000` | Port to bind the web server to |
 
-Host and port can also be configured via `OPINIONFORGE_HOST` and `OPINIONFORGE_PORT` environment variables.
+### Web UI Pages
 
-### Web UI Features
-
-- **Home page** (`/`) -- Generation form with topic input (text, URL, or file), mode selector grid, stance slider, intensity slider, length presets, export format selection, and image prompt toggle
-- **Mode browser** (`/modes`) -- All 12 rhetorical modes displayed in a filterable grid organized by category, with links to individual mode detail pages
+- **Home** (`/`) -- Generation form with topic input (text, URL, or file), mode selector grid, stance slider, intensity slider, length presets, export format selection, and image prompt toggle. Recent pieces sidebar and topic suggestions.
+- **Mode browser** (`/modes`) -- All 12 rhetorical modes in a filterable grid organized by category, with links to individual mode detail pages
 - **Mode detail** (`/modes/{id}`) -- Full profile for each mode including rhetorical devices, prose patterns, vocabulary register, argument structure, and signature patterns
-- **About page** (`/about`) -- Project overview, the 12-mode system, stance and intensity controls, disclaimer policy, and how the generation pipeline works
+- **History** (`/history`) -- Browse, search, filter, sort, and manage all generated pieces. Filter by mode, stance range, date range. Bulk select and delete. Click any piece to re-read or re-export.
+- **Settings** (`/settings`) -- Configure LLM provider and model, enter API keys (encrypted at rest), set up search provider, customize default mode/stance/intensity/length/theme, export all data as JSON, clear history.
+- **Setup** (`/setup`) -- First-run onboarding wizard: welcome, LLM provider configuration with connection test, search provider setup, quick tour, test generation.
+- **About** (`/about`) -- Project overview, the 12-mode system, disclaimer policy.
 
 ### Generation Flow
 
@@ -314,13 +337,55 @@ When you submit a topic through the web form, OpinionForge streams progress via 
 1. **Researching** -- Preparing research context
 2. **Generating** -- Generating the opinion piece using the selected mode, stance, and intensity
 3. **Screening** -- Running originality screening
-4. **Done** -- Piece delivered with mandatory disclaimer
+4. **Done** -- Piece delivered with mandatory disclaimer, copy button, export buttons
 
-If screening fails, an error event is returned instead of the blocked output.
+If screening fails, an error event is returned instead of the blocked output. Generated pieces are automatically saved to the local database.
 
-### Environment Variables
+---
 
-The web UI uses the same environment variables as the CLI. No additional configuration is required beyond what is needed for CLI generation (`ANTHROPIC_API_KEY`, `OPINIONFORGE_LLM_PROVIDER`, etc.).
+## LLM Providers
+
+OpinionForge is provider-agnostic. Configure your provider in the Settings page or via environment variables.
+
+| Provider | Type | Requirements |
+|----------|------|-------------|
+| Ollama | Local, free | Install Ollama, pull a model |
+| Anthropic (Claude) | Cloud, per-token | `ANTHROPIC_API_KEY` |
+| OpenAI (GPT-4o) | Cloud, per-token | `OPENAI_API_KEY` |
+| OpenAI-compatible | Cloud/local, varies | `OPENAI_API_KEY` + base URL |
+
+Switch providers at any time from the Settings page. All providers use the same rhetorical mode system.
+
+---
+
+## Local Storage
+
+All data is stored in a local SQLite database at the platform-standard location:
+
+- **Linux**: `~/.local/share/opinionforge/opinionforge.db`
+- **macOS**: `~/Library/Application Support/opinionforge/opinionforge.db`
+- **Windows**: `%LOCALAPPDATA%/opinionforge/opinionforge.db`
+
+The database stores:
+
+- **Pieces** -- every generated piece with full metadata (topic, mode, stance, intensity, sources, screening results)
+- **Exports** -- export records linked to parent pieces
+- **Settings** -- provider config, user preferences, custom key-value pairs
+
+API keys are encrypted at rest using Fernet symmetric encryption.
+
+---
+
+## Desktop App
+
+Install the desktop extras and launch from the system tray:
+
+```bash
+pip install opinionforge[desktop]
+opinionforge desktop
+```
+
+The tray icon provides one-click access to start/stop the web server and open the browser. The app runs in the background until quit.
 
 ---
 
@@ -647,7 +712,7 @@ Note: CLI config changes are session-only. For persistence, update your `.env` f
 
 ```
 opinionforge/
-├── __init__.py             # Package init, __version__ = "1.0.0"
+├── __init__.py             # Package init, __version__ = "2.0.0"
 ├── __main__.py             # Entry point: python -m opinionforge
 ├── cli.py                  # Typer CLI application (5 commands)
 ├── config.py               # Settings via pydantic-settings
@@ -688,11 +753,27 @@ opinionforge/
 │   ├── mode.py             # ModeProfile, ProsePatterns, VocabularyRegister, ArgumentStructure
 │   ├── piece.py            # GeneratedPiece, ScreeningResult, SourceCitation
 │   └── topic.py            # TopicContext
+├── providers/              # LLM provider backends
+│   ├── base.py             # Abstract provider interface (LLMProvider protocol)
+│   ├── registry.py         # Provider discovery, instantiation, connection testing
+│   ├── anthropic.py        # Anthropic Claude adapter
+│   ├── openai_provider.py  # OpenAI adapter
+│   ├── ollama.py           # Ollama local LLM adapter
+│   └── openai_compatible.py # OpenAI-compatible endpoint adapter
+├── storage/                # Local SQLite persistence
+│   ├── database.py         # Connection manager, schema, migrations
+│   ├── pieces.py           # Piece CRUD (save, get, list, search, filter, delete)
+│   ├── exports.py          # Export record CRUD
+│   ├── settings.py         # Key-value settings + typed ProviderConfig/UserPreferences
+│   └── encryption.py       # API key encryption at rest (Fernet)
+├── desktop/                # Desktop tray app (optional)
+│   ├── tray.py             # System tray icon and menu (Pystray)
+│   └── browser.py          # Browser launch helper
 ├── web/
 │   ├── app.py              # FastAPI application factory (create_app)
 │   ├── sse.py              # SSE streaming helper for generation pipeline
-│   ├── templates/          # Jinja2 templates (home, modes, about, partials)
-│   └── static/             # CSS and static assets
+│   ├── templates/          # Jinja2 templates (home, modes, history, settings, setup, about, partials)
+│   └── static/             # CSS, JS, and static assets
 ├── utils/
 │   ├── fetcher.py          # URL fetching with httpx + trafilatura extraction
 │   ├── search.py           # Search clients (Tavily, Brave, SerpAPI)
