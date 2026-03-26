@@ -1,4 +1,18 @@
-# PRD: OpinionForge v1.0.0 (Legal Refactor)
+# PRD: OpinionForge v1.0.0 (Risk-Reduction Refactor)
+
+**PRD Version:** 3.0
+**Last Updated:** 2026-03-25
+**Product Version:** 1.0.0
+
+**Revision History:**
+
+| PRD Version | Date | Description |
+|-------------|------|-------------|
+| 1.0 | 2026-03-25 | Original Phase 1 MVP spec (PRD Writer output) |
+| 2.0 | 2026-03-25 | Legal refactor rewrite — 12 rhetorical modes replace 100 named profiles |
+| 3.0 | 2026-03-25 | 9 amendments from legal counsel: tightened safeguards, removed escape hatches, blocked output on screening failure, removed named-writer mappings from spec |
+
+---
 
 ## Executive Summary
 
