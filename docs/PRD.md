@@ -1,6 +1,6 @@
 # PRD: OpinionForge v1.0.0 (Risk-Reduction Refactor)
 
-**PRD Version:** 3.0
+**PRD Version:** 4.0
 **Last Updated:** 2026-03-25
 **Product Version:** 1.0.0
 
@@ -11,6 +11,7 @@
 | 1.0 | 2026-03-25 | Original Phase 1 MVP spec (PRD Writer output) |
 | 2.0 | 2026-03-25 | Legal refactor rewrite — 12 rhetorical modes replace 100 named profiles |
 | 3.0 | 2026-03-25 | 9 amendments from legal counsel: tightened safeguards, removed escape hatches, blocked output on screening failure, removed named-writer mappings from spec |
+| 4.0 | 2026-03-25 | Amendment: Web UI added to v1.0.0 scope (Feature 9, Sprints 8-10) |
 
 ---
 
@@ -610,16 +611,116 @@ No new runtime dependencies are required. The similarity screening module uses o
 - Mode not found with close-match suggestions
 - All 12 modes produce non-empty system prompt fragments
 
+## Feature 9: Web UI
+
+**Amendment (PRD v4.0):** The web UI ships as part of v1.0.0, not as a future phase.
+
+### Stack
+
+- **FastAPI** — backend API wrapping the existing generation pipeline
+- **HTMX** — interactive frontend without a JavaScript framework
+- **Jinja2** — server-side templates
+- Zero additional JavaScript frameworks. HTMX handles all dynamic behavior.
+
+### Pages and Routes
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `GET /` | Home | Mode browser, topic input, stance/intensity controls, generate button |
+| `POST /generate` | (HTMX partial) | Streams generation progress, returns the finished piece |
+| `GET /preview` | (HTMX partial) | Tone preview before committing to full generation |
+| `GET /modes` | Mode catalog | Browse all 12 modes with descriptions, categories, rhetorical devices |
+| `GET /modes/{mode_id}` | Mode detail | Full profile view for a single mode |
+| `POST /export` | (HTMX partial) | Export the current piece to Substack/Medium/WordPress/Twitter format |
+| `GET /about` | About | What OpinionForge is, how it works, disclaimer policy |
+
+### Home Page Controls
+
+The home page is the primary interface. It provides:
+
+1. **Topic input** — text area, URL field, or file upload. Tabs for each input mode.
+2. **Mode selector** — visual grid of 12 modes organized by category (confrontational, investigative, deliberative, literary). Click to select. Click a second mode to blend. Weights adjustable via sliders when blending.
+3. **Stance slider** — horizontal slider from -100 to +100. Labels update dynamically: "strongly equity-focused" through "balanced" through "strongly liberty-focused." No political party labels.
+4. **Intensity slider** — horizontal slider from 0.0 to 1.0. Labels: "measured" through "moderate" through "forceful" through "maximum conviction."
+5. **Length selector** — dropdown with presets (short, standard, long, essay, feature) or custom word count input.
+6. **Export format** — dropdown: plain text, Substack, Medium, WordPress, Twitter thread.
+7. **Image prompt toggle** — checkbox to generate a header image prompt. When enabled, shows style selector (photorealistic, editorial, cartoon, minimalist, vintage, abstract) and platform selector (Substack, Medium, WordPress, Facebook, Twitter, Instagram).
+8. **Generate button** — launches the pipeline. Disabled until a topic is provided.
+
+### Generation Flow
+
+1. User fills in topic and selects controls.
+2. User clicks "Preview Tone" (optional) — HTMX call to `/preview`, returns a 2-3 sentence tone preview inline without page reload.
+3. User clicks "Generate" — HTMX call to `/generate` with SSE streaming.
+4. Progress indicators show: "Researching sources..." → "Generating piece..." → "Screening for originality..." → "Done."
+5. Finished piece appears in a reading pane with title, body, sources, and disclaimer.
+6. Export buttons appear below the piece.
+
+### Disclaimer Policy in the Web UI
+
+The disclaimer is included in every generated piece by default. The terms of service and about page clearly state that the disclaimer must be preserved in any published version of the output. The UI does not provide a button or toggle to remove it. However, once a user exports or copies the text, they have the output — OpinionForge states the requirement but does not enforce it beyond the application boundary. The responsibility for compliance with the disclaimer policy rests with the user after export.
+
+This is the same approach as the CLI: the disclaimer is always present in the output. There is no --no-disclaimer flag. But OpinionForge is a tool, not a policeman.
+
+### Screening in the Web UI
+
+Similarity screening runs on every generation, same as CLI. If screening fails after 2 rewrite attempts, the UI displays a clear message: "This output did not pass originality screening. Please try regenerating with different settings or a revised topic." The blocked output is not shown to the user. This matches CLI exit code 8 behavior.
+
+### Design Requirements
+
+- Clean, editorial aesthetic consistent with the landing page (Georgia serif, cream/ink palette)
+- Responsive — works on desktop and mobile
+- No JavaScript frameworks — HTMX only
+- Mode cards should show the mode's rhetorical character at a glance
+- The stance and intensity sliders should show real-time label updates as the user drags
+- Generated output should render markdown properly (headers, lists, blockquotes)
+- Copy-to-clipboard button on the output pane
+- Dark/light mode toggle (nice-to-have, not required for v1)
+
+### API Configuration
+
+The web UI reads the same environment variables as the CLI:
+
+- `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`
+- `OPINIONFORGE_LLM_PROVIDER`
+- `OPINIONFORGE_SEARCH_API_KEY`
+- `OPINIONFORGE_SEARCH_PROVIDER`
+
+An additional variable controls the web server:
+
+- `OPINIONFORGE_HOST` — default `127.0.0.1`
+- `OPINIONFORGE_PORT` — default `8000`
+
+### CLI Integration
+
+The web UI is launched via a new CLI command:
+
+```
+opinionforge serve [--host HOST] [--port PORT]
+```
+
+This starts the FastAPI server. The `write`, `preview`, `modes`, and `export` CLI commands continue to work independently.
+
+### Testing
+
+- API route tests using FastAPI's TestClient
+- HTMX response tests (verify correct partial HTML responses)
+- Integration test: generate via web UI with mock LLM, verify output includes disclaimer
+- Integration test: screening failure returns error message, not blocked output
+- All web UI tests use mock LLM/search clients — zero real API calls
+
+---
+
 ## Version Roadmap
 
 | Version | Phase | What Ships |
 |---------|-------|------------|
-| 0.1.0 | MVP (shipped) | Core generation engine, 10 writer profiles, spectrum slider, CLI basics |
-| 0.2.0 | Phase 2 (shipped) | 100 writer profiles, voice blending, export formats, image prompts, research engine |
-| 1.0.0 | Legal Refactor (this PRD) | 12 abstract rhetorical modes replacing 100 named profiles; stance/intensity controls replacing spectrum slider; mandatory disclaimers; similarity screening; confusability test suite; complete name sanitization; editorial craft engine positioning |
+| 0.1.0 | MVP (shipped, private) | Core generation engine, 10 writer profiles, spectrum slider, CLI basics |
+| 0.2.0 | Phase 2 (shipped, private) | 100 writer profiles, voice blending, export formats, image prompts, research engine |
+| 1.0.0 | Risk-reduction refactor + Web UI (this PRD) | 12 abstract rhetorical modes; stance/intensity controls; mandatory disclaimers; similarity screening; confusability testing; name sanitization; web UI with FastAPI + HTMX; editorial craft engine positioning |
 
-- `0.x.x` = pre-release; API and interfaces may change between versions
-- `1.0.0` = materially risk-reduced public release with stable API, mandatory disclosure, blocked screening failures, and no shipped named-person emulation surface.
+- `0.x.x` = pre-release, private; API and interfaces may change between versions
+- `1.0.0` = materially risk-reduced public release with stable API, mandatory disclosure, blocked screening failures, no shipped named-person emulation surface, and full web interface.
 
 ## Success Criteria
 
@@ -655,3 +756,11 @@ No new runtime dependencies are required. The similarity screening module uses o
 - [ ] `docs/MODES.md` documenting all 12 rhetorical modes
 - [ ] `docs/index.html` landing page (rewritten, no writer names)
 - [ ] `.gitignore` updated to exclude `research/` directory (internal research notes)
+- [ ] Web UI: FastAPI backend (`opinionforge/web/app.py`)
+- [ ] Web UI: HTMX templates (`opinionforge/web/templates/`)
+- [ ] Web UI: Static assets (`opinionforge/web/static/`)
+- [ ] Web UI: `opinionforge serve` CLI command
+- [ ] Web UI: Route tests with FastAPI TestClient
+- [ ] Web UI: Integration tests (generate, preview, export, screening failure)
+- [ ] Web UI: Disclaimer present in all web-generated output
+- [ ] Web UI: Responsive layout (desktop + mobile)
